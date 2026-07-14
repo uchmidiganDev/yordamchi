@@ -32,6 +32,12 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Claude Code (shaxsiy konfiguratsiya)
+.claude/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*

@@ -97,3 +97,9 @@ to'g'ri ko'rinadigan.
 - ❌ Ma'lumotlar bazasi, API, haqiqiy CRUD.
 - ❌ Haqiqiy autentifikatsiya (faqat login tugmasi ko'rinishi).
 - ❌ AI, Gemini, kalendar sinxron, Telegram.
+
+---
+
+## Hisobot
+
+- **[2026-07-14]** — Sprint vazifalari hali boshlanmagan. Faqat infratuzilma tekshiruvi bajarildi: Vercel loyihasi GitHub repo bilan bog'landi va test `index.html` fayli orqali avtomatik deploy workflow tasdiqlandi. Bu "Vercel'ga dastlabki deploy" vazifasini (6-bo'lim) hali yakunlamaydi — u haqiqiy mock frontend prototipi tayyor bo'lgach bajariladi, shuning uchun tegishli band `[ ]` holatida qoldirildi.
