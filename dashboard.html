@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yordamchi — Sprint Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card-hover: #222634;
+    --border: #2a2f3d;
+    --text: #e6e8ee;
+    --muted: #9aa0b0;
+    --accent: #6c8cff;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --gray: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 32px 20px;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  header { margin-bottom: 28px; }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .subtitle { color: var(--muted); margin-top: 6px; font-size: 15px; }
+
+  .overview {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 24px 0 32px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    flex: 1;
+    min-width: 140px;
+  }
+  .stat .num { font-size: 26px; font-weight: 700; }
+  .stat .label { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .progress-wrap { margin: 0 0 32px; }
+  .progress-bar {
+    height: 10px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    border-radius: 999px;
+    transition: width .6s ease;
+  }
+  .progress-label { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:8px; }
+
+  .sprints { display: grid; gap: 16px; }
+  .sprint {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    transition: background .2s, transform .2s;
+  }
+  .sprint:hover { background: var(--card-hover); transform: translateY(-2px); }
+  .sprint-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .sprint-title { display: flex; align-items: center; gap: 12px; }
+  .sprint-num {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: rgba(108,140,255,.15);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px;
+    flex-shrink: 0;
+  }
+  .sprint-title h2 { font-size: 17px; font-weight: 600; }
+
+  .badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge.planned { background: rgba(107,114,128,.18); color: #9aa0b0; }
+  .badge.progress { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .badge.done { background: rgba(52,211,153,.15); color: var(--green); }
+
+  .sprint-desc { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .tag {
+    font-size: 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 7px;
+  }
+
+  .deliverable {
+    font-size: 13px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  .deliverable strong { color: var(--text); font-weight: 600; }
+
+  footer { margin-top: 32px; text-align: center; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Yordamchi — Sprint Dashboard</h1>
+    <p class="subtitle">AI maqsad-vazifa boshqaruv platformasi · Ishlab chiqish bosqichi</p>
+  </header>
+
+  <div class="overview">
+    <div class="stat"><div class="num">4</div><div class="label">Jami sprint</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">0</div><div class="label">Bajarilgan</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">1</div><div class="label">Jarayonda</div></div>
+    <div class="stat"><div class="num" style="color:var(--gray)">3</div><div class="label">Rejalashtirilgan</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Umumiy progress</span><span>6%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:6%"></div></div>
+  </div>
+
+  <div class="sprints">
+
+    <div class="sprint">
+      <div class="sprint-head">
+        <div class="sprint-title">
+          <div class="sprint-num">1</div>
+          <h2>Dizayn va Ekranlar</h2>
+        </div>
+        <span class="badge planned">Rejalashtirilgan</span>
+      </div>
+      <p class="sprint-desc">UI/UX dizayn tizimi va barcha ekranlarni mock ma'lumot bilan yaratish. Backend yo'q — faqat vizual prototip va navigatsiya.</p>
+      <div class="tags">
+        <span class="tag">Dizayn tizimi</span>
+        <span class="tag">9 ekran + 2 modal</span>
+        <span class="tag">Tailwind + shadcn/ui</span>
+        <span class="tag">Responsiv</span>
+      </div>
+      <div class="deliverable"><strong>Natija:</strong> Vercel'da ochiladigan, barcha ekranlari va navigatsiyasi ishlaydigan frontend prototip (mock ma'lumot bilan).</div>
+    </div>
+
+    <div class="sprint">
+      <div class="sprint-head">
+        <div class="sprint-title">
+          <div class="sprint-num">2</div>
+          <h2>DB, Bekend, Avtorizatsiya va CRUD</h2>
+        </div>
+        <span class="badge progress">Jarayonda</span>
+      </div>
+      <p class="sprint-desc">Ma'lumotlar bazasi, backend mantiqi, Telegram orqali kirish va maqsad/vazifalar ustida to'liq CRUD. Mock ma'lumot haqiqiy baza bilan almashtiriladi. Neon + Drizzle ulandi, Telegram deeplink orqali avtorizatsiya va sessiya ishlamoqda (Auth.js o'rniga); Maqsad/Vazifa CRUD, Google OAuth va to'liq sxema hali qolgan.</p>
+      <div class="tags">
+        <span class="tag">Neon Postgres</span>
+        <span class="tag">Drizzle ORM</span>
+        <span class="tag">Telegram deeplink auth</span>
+        <span class="tag">CRUD (rejada)</span>
+      </div>
+      <div class="deliverable"><strong>Natija:</strong> Telegram orqali kiriladigan, maqsad va vazifalarni haqiqiy bazada boshqaradigan ishlaydigan ilova.</div>
+    </div>
+
+    <div class="sprint">
+      <div class="sprint-head">
+        <div class="sprint-title">
+          <div class="sprint-num">3</div>
+          <h2>Asosiy Funksiyalar, AI va Kalendar</h2>
+        </div>
+        <span class="badge planned">Rejalashtirilgan</span>
+      </div>
+      <p class="sprint-desc">Google Gemini AI yadrosi (kunlik tahlil, ertangi reja, progress, maqsadni bo'lish) va Google Calendar ikki tomonlama sinxronizatsiya.</p>
+      <div class="tags">
+        <span class="tag">Gemini API (A–F)</span>
+        <span class="tag">Google Calendar sinxron</span>
+        <span class="tag">Talab bo'yicha tahlil</span>
+        <span class="tag">Band vaqtlar</span>
+      </div>
+      <div class="deliverable"><strong>Natija:</strong> Tugma bosilganda Gemini to'liq tahlil beradi; vazifalar Google Calendar bilan sinxronlanadi va band vaqtlar rejaga ta'sir qiladi.</div>
+    </div>
+
+    <div class="sprint">
+      <div class="sprint-head">
+        <div class="sprint-title">
+          <div class="sprint-num">4</div>
+          <h2>Testlash, Telegram Bot va Mini App</h2>
+        </div>
+        <span class="badge planned">Rejalashtirilgan</span>
+      </div>
+      <p class="sprint-desc">Avtomatik kunlik oqim (Cron), Telegram bot orqali xabar yuborish, Telegram Mini App va butun tizimni testlab barqarorlashtirish.</p>
+      <div class="tags">
+        <span class="tag">Vercel Cron</span>
+        <span class="tag">grammY bot</span>
+        <span class="tag">Telegram Mini App</span>
+        <span class="tag">Testlar</span>
+      </div>
+      <div class="deliverable"><strong>Natija:</strong> Belgilangan vaqtda avtomatik tahlil qilib Telegram'ga reja/xulosa yuboradigan, Mini App sifatida ochiladigan barqaror mahsulot.</div>
+    </div>
+
+  </div>
+
+  <footer>Yordamchi · PRD va reja hujjatlari <code>PRD.md</code> va <code>sprints/</code> papkasida</footer>
+</div>
+</body>
+</html>

@@ -71,15 +71,15 @@ Sprint 1'dagi mock ma'lumot haqiqiy baza bilan almashtiriladi.
 
 ## 6. Vazifalar (Tasklar)
 
-- [ ] Neon Postgres yaratish va ulash.
-- [ ] Drizzle sxema + migratsiyalar (`users`, `goals`, `tasks`, `task_occurrences`, `analyses`).
-- [ ] Auth.js — Telegram Login integratsiyasi.
+- [x] Neon Postgres yaratish va ulash.
+- [ ] Drizzle sxema + migratsiyalar (`users`, `goals`, `tasks`, `task_occurrences`, `analyses`) — **qisman bajarildi:** hozircha faqat `users` va `login_tokens` (yordamchi) jadvallari yaratilib, migratsiya Neon bazasiga qo'llandi; `goals`, `tasks`, `task_occurrences`, `analyses` keyingi sprintga qoldirildi.
+- [x] Auth.js — Telegram Login integratsiyasi. **Deviatsiya:** Auth.js (NextAuth) + Telegram Login Widget o'rniga Telegram bot deeplink (`/start` orqali) + custom JWT sessiya (`jose`, httpOnly cookie) yondashuvi qo'llanildi — sabab: foydalanuvchi faqat o'zining Telegram ID'si (8172404961) orqali kirishni talab qildi, bu botning `/start` handlerida to'g'ridan-to'g'ri tekshiriladi.
 - [ ] Google OAuth ulash oqimi (token saqlash).
-- [ ] Himoyalangan sahifalar / sessiya.
+- [x] Himoyalangan sahifalar / sessiya.
 - [ ] Maqsad CRUD (API + frontend ulash).
 - [ ] Vazifa CRUD + takrorlanuvchi occurrence logikasi.
 - [ ] Sozlamalar (vaqt, TZ) saqlash.
-- [ ] Server tomon validatsiya.
+- [ ] Server tomon validatsiya. (Qisman: login token amal qilish muddati va webhook secret tekshiruvi mavjud; umumiy CRUD validatsiyasi hali yo'q.)
 
 ---
 
@@ -94,7 +94,7 @@ keyingi sprintда).
 
 ## 8. Tayyorlik mezoni (Definition of Done)
 
-- [ ] Foydalanuvchi Telegram orqali kirib, sessiya oladi.
+- [x] Foydalanuvchi Telegram orqali kirib, sessiya oladi.
 - [ ] Maqsad yaratish/tahrirlash/o'chirish ishlaydi va bazada saqlanadi.
 - [ ] Bir martalik va takrorlanuvchi vazifa yaratiladi, tahrirlanadi, o'chiriladi.
 - [ ] Vazifa/occurrence holati (bajarildi/o'tkazildi) belgilanadi va saqlanadi.
@@ -110,3 +110,9 @@ keyingi sprintда).
 - ❌ AI / Gemini tahlili.
 - ❌ Google Calendar bilan haqiqiy sinxronizatsiya (faqat ulash).
 - ❌ Telegram avtomatik xabar yuborish.
+
+---
+
+## Hisobot
+
+- **2026-07-14** — Next.js 16 (App Router, TypeScript, Turbopack) loyiha asosi o'rnatildi va Neon Postgres'ga Drizzle ORM orqali ulandi (`src/db/schema.ts`, `src/db/index.ts`, `drizzle.config.ts`); hozircha faqat `users` va `login_tokens` jadvallari yaratilib migratsiya qo'llandi (`drizzle/0000_famous_inertia.sql`). Telegram orqali kirish oqimi to'liq ishga tushirildi: grammY bot (`src/lib/telegram-bot.ts`) `/start` komandasida faqat `ALLOWED_TELEGRAM_ID` (8172404961) ga ruxsat beradi, deeplink token orqali tasdiqlaydi; sessiya `jose` JWT + httpOnly cookie (`src/lib/session.ts`) orqali boshqariladi; `src/proxy.ts` himoyalangan sahifalarni sessiyasiz foydalanuvchidan `/login`ga yo'naltiradi. API route'lar qo'shildi: `/api/telegram/webhook`, `/api/auth/telegram/start`, `/api/auth/telegram/status`, `/api/auth/logout`. `/login` va bosh sahifa (`/`) skeleton ko'rinishida ishlaydi. Vercel (`yordamchi-3upk`) production environment o'zgaruvchilari (DATABASE_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME, ALLOWED_TELEGRAM_ID, SESSION_SECRET, TELEGRAM_WEBHOOK_SECRET, NEXT_PUBLIC_APP_URL) sozlandi. Auth.js/Telegram Login Widget o'rniga deeplink+JWT yondashuvi qo'llanilgani yuqorida "Vazifalar" bo'limida deviatsiya sifatida qayd etildi (qaror `CLAUDE.md`da ham yozilgan). Maqsad/Vazifa CRUD, Google OAuth, sozlamalar saqlash va to'liq 5 jadvalli sxema hali bajarilmagan — keyingi ishga qoldirildi.
