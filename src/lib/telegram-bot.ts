@@ -1,9 +1,10 @@
-import { Bot } from "grammy";
+import { Bot, Context } from "grammy";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens } from "@/db/schema";
 import { parsePaynetReceipt } from "./paynet-receipt";
 import { saveReceiptExpense } from "./expense-from-receipt";
+import { extractPdfText } from "./pdf-text";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
@@ -100,17 +101,25 @@ bot.command("start", async (ctx) => {
   await ctx.reply("✅ Muvaffaqiyatli tasdiqlandi! Ilovaga qaytishingiz mumkin.");
 });
 
-// Botга forward qilingan Paynet chekini o'qib, avtomatik xarajat sifatida
-// saqlaydi. Faqat loyiha egasining xabarlari qabul qilinadi.
-bot.on("message:text", async (ctx) => {
-  const fromId = ctx.from?.id;
-  if (!fromId || fromId.toString() !== ALLOWED_TELEGRAM_ID) return;
-
-  const text = ctx.message.text;
-  if (text.startsWith("/")) return; // komandalar alohida ishlanadi
-
+// Chek matnini parse qilib, foydalanuvchining xarajatiga saqlaydi va natijani
+// javob sifatida yuboradi. Matn ham, PDF'dan ajratilgan matn ham shu funksiyaga
+// beriladi. `silentIfNotReceipt` — matn xabarlar uchun true (chek bo'lmasa jim
+// turamiz), PDF uchun false (foydalanuvchiga xatolikni aytamiz).
+async function handleReceiptText(
+  ctx: Context,
+  text: string,
+  fromId: number,
+  silentIfNotReceipt: boolean
+) {
   const receipt = parsePaynetReceipt(text);
-  if (!receipt) return; // chek emas — jim turamiz
+  if (!receipt) {
+    if (!silentIfNotReceipt) {
+      await ctx.reply(
+        "Bu faylda Paynet cheki topilmadi. Iltimos, o'tkazma chekini yuboring."
+      );
+    }
+    return;
+  }
 
   const [user] = await db
     .select()
@@ -136,5 +145,53 @@ bot.on("message:text", async (ctx) => {
   } catch (error) {
     console.error("[telegram-bot] chekni saqlashda xato", error);
     await ctx.reply("Chekni saqlashda xatolik yuz berdi. Keyinroq urinib ko'ring.");
+  }
+}
+
+// Botга forward qilingan Paynet chekini (matn) o'qib, avtomatik xarajat sifatida
+// saqlaydi. Faqat loyiha egasining xabarlari qabul qilinadi.
+bot.on("message:text", async (ctx) => {
+  const fromId = ctx.from?.id;
+  if (!fromId || fromId.toString() !== ALLOWED_TELEGRAM_ID) return;
+
+  const text = ctx.message.text;
+  if (text.startsWith("/")) return; // komandalar alohida ishlanadi
+
+  await handleReceiptText(ctx, text, fromId, true);
+});
+
+// PDF chek yuborilganda: faylni yuklab olib, matnini ajratib, xuddi matn chek
+// kabi qayta ishlaydi. Faqat loyiha egasi va faqat PDF fayllar qabul qilinadi.
+bot.on("message:document", async (ctx) => {
+  const fromId = ctx.from?.id;
+  if (!fromId || fromId.toString() !== ALLOWED_TELEGRAM_ID) return;
+
+  const doc = ctx.message.document;
+  const isPdf =
+    doc.mime_type === "application/pdf" ||
+    (doc.file_name?.toLowerCase().endsWith(".pdf") ?? false);
+  if (!isPdf) {
+    await ctx.reply("Iltimos, chekni PDF fayl ko'rinishida yuboring.");
+    return;
+  }
+
+  try {
+    const file = await ctx.getFile(); // file_path'ni oladi
+    if (!file.file_path) {
+      await ctx.reply("Faylni yuklab bo'lmadi. Qaytadan urinib ko'ring.");
+      return;
+    }
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const res = await fetch(fileUrl);
+    if (!res.ok) {
+      await ctx.reply("Faylni yuklab bo'lmadi. Qaytadan urinib ko'ring.");
+      return;
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const text = await extractPdfText(bytes);
+    await handleReceiptText(ctx, text, fromId, false);
+  } catch (error) {
+    console.error("[telegram-bot] PDF chekni o'qishda xato", error);
+    await ctx.reply("PDF faylni o'qishda xatolik yuz berdi. Qaytadan urinib ko'ring.");
   }
 });
