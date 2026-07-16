@@ -3,7 +3,9 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens } from "@/db/schema";
 import { parsePaynetReceipt } from "./paynet-receipt";
-import { saveReceiptExpense } from "./expense-from-receipt";
+import { parseGenericReceipt } from "./generic-receipt";
+import { saveReceiptExpense, saveGenericExpense } from "./expense-from-receipt";
+import type { ReceiptSaveResult } from "./expense-from-receipt";
 import { extractPdfText } from "./pdf-text";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -101,10 +103,30 @@ bot.command("start", async (ctx) => {
   await ctx.reply("✅ Muvaffaqiyatli tasdiqlandi! Ilovaga qaytishingiz mumkin.");
 });
 
-// Chek matnini parse qilib, foydalanuvchining xarajatiga saqlaydi va natijani
-// javob sifatida yuboradi. Matn ham, PDF'dan ajratilgan matn ham shu funksiyaga
-// beriladi. `silentIfNotReceipt` — matn xabarlar uchun true (chek bo'lmasa jim
-// turamiz), PDF uchun false (foydalanuvchiga xatolikni aytamiz).
+// Loyiha egasining foydalanuvchi yozuvini oladi (telegram id bo'yicha).
+async function getOwnerUser(fromId: number) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.telegramId, BigInt(fromId)))
+    .limit(1);
+  return user ?? null;
+}
+
+// Saqlash natijasini foydalanuvchiga javob sifatida yuboradi.
+async function replySaveResult(ctx: Context, result: ReceiptSaveResult) {
+  if (result.status === "duplicate") {
+    await ctx.reply("Bu chek allaqachon qo'shilgan ✅");
+    return;
+  }
+  const formatted = String(result.amount).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  await ctx.reply(
+    `✅ Xarajat qo'shildi\n💳 ${result.cardName}\n💰 ${formatted} so'm`
+  );
+}
+
+// Matn chekini (Paynet formati) parse qilib, xarajat sifatida saqlaydi.
+// `silentIfNotReceipt` — chek bo'lmasa jim turish (oddiy matn xabarlar uchun).
 async function handleReceiptText(
   ctx: Context,
   text: string,
@@ -114,19 +136,12 @@ async function handleReceiptText(
   const receipt = parsePaynetReceipt(text);
   if (!receipt) {
     if (!silentIfNotReceipt) {
-      await ctx.reply(
-        "Bu faylda Paynet cheki topilmadi. Iltimos, o'tkazma chekini yuboring."
-      );
+      await ctx.reply("Bu matnda chek topilmadi.");
     }
     return;
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.telegramId, BigInt(fromId)))
-    .limit(1);
-
+  const user = await getOwnerUser(fromId);
   if (!user) {
     await ctx.reply("Avval ilovaga kiring, keyin cheklarni yuboring.");
     return;
@@ -134,14 +149,7 @@ async function handleReceiptText(
 
   try {
     const result = await saveReceiptExpense(user.id, receipt);
-    if (result.status === "duplicate") {
-      await ctx.reply("Bu chek allaqachon qo'shilgan ✅");
-      return;
-    }
-    const formatted = String(result.amount).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    await ctx.reply(
-      `✅ Xarajat qo'shildi\n💳 ${result.cardName}\n💰 ${formatted} so'm`
-    );
+    await replySaveResult(ctx, result);
   } catch (error) {
     console.error("[telegram-bot] chekni saqlashda xato", error);
     await ctx.reply("Chekni saqlashda xatolik yuz berdi. Keyinroq urinib ko'ring.");
@@ -160,8 +168,8 @@ bot.on("message:text", async (ctx) => {
   await handleReceiptText(ctx, text, fromId, true);
 });
 
-// PDF chek yuborilganda: faylni yuklab olib, matnini ajratib, xuddi matn chek
-// kabi qayta ishlaydi. Faqat loyiha egasi va faqat PDF fayllar qabul qilinadi.
+// PDF yuborilganda: faylni yuklab olib, matnini ajratadi. Avval Paynet cheki
+// sifatida sinaydi; bo'lmasa istalgan PDF'dan summani topib xarajatga qo'shadi.
 bot.on("message:document", async (ctx) => {
   const fromId = ctx.from?.id;
   if (!fromId || fromId.toString() !== ALLOWED_TELEGRAM_ID) return;
@@ -189,7 +197,31 @@ bot.on("message:document", async (ctx) => {
     }
     const bytes = new Uint8Array(await res.arrayBuffer());
     const text = await extractPdfText(bytes);
-    await handleReceiptText(ctx, text, fromId, false);
+
+    const user = await getOwnerUser(fromId);
+    if (!user) {
+      await ctx.reply("Avval ilovaga kiring, keyin cheklarni yuboring.");
+      return;
+    }
+
+    // Avval Paynet formatida sinaymiz (karta va tranzaksiya ma'lumoti aniqroq).
+    const paynet = parsePaynetReceipt(text);
+    if (paynet) {
+      const result = await saveReceiptExpense(user.id, paynet);
+      await replySaveResult(ctx, result);
+      return;
+    }
+
+    // Aks holda istalgan PDF'dan summani ajratib, xarajatga qo'shamiz.
+    const generic = parseGenericReceipt(text, doc.file_name ?? "PDF chek");
+    if (!generic) {
+      await ctx.reply(
+        "PDF ochildi, lekin ichidan summa topilmadi. Chekda summa borligini tekshiring."
+      );
+      return;
+    }
+    const result = await saveGenericExpense(user.id, generic);
+    await replySaveResult(ctx, result);
   } catch (error) {
     console.error("[telegram-bot] PDF chekni o'qishda xato", error);
     await ctx.reply("PDF faylni o'qishda xatolik yuz berdi. Qaytadan urinib ko'ring.");

@@ -2,10 +2,33 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, expenses } from "@/db/schema";
 import type { PaynetReceipt } from "./paynet-receipt";
+import type { GenericReceipt } from "./generic-receipt";
 
 export type ReceiptSaveResult =
   | { status: "created"; amount: number; cardName: string }
   | { status: "duplicate" };
+
+// Foydalanuvchining "PDF cheklar" kartasini topadi yoki yaratadi. Paynet
+// bo'lmagan cheklar shu kartaga biriktiriladi.
+async function getOrCreatePdfCard(userId: string) {
+  const [existing] = await db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.userId, userId), eq(cards.name, "PDF cheklar")))
+    .limit(1);
+  if (existing) return existing;
+
+  const [created] = await db
+    .insert(cards)
+    .values({
+      userId,
+      name: "PDF cheklar",
+      numberMasked: "****",
+      brand: "uzcard",
+    })
+    .returning();
+  return created;
+}
 
 // Parse qilingan chekni foydalanuvchining xarajatiga aylantiradi. Bot kontekstida
 // (sessiyasiz) ishlagani uchun userId to'g'ridan-to'g'ri beriladi.
@@ -53,6 +76,36 @@ export async function saveReceiptExpense(
     category: "O'tkazma",
     amount: receipt.amount,
     externalRef: receipt.txnNumber,
+    spentAt: receipt.spentAt,
+  });
+
+  return { status: "created", amount: receipt.amount, cardName: card.name };
+}
+
+// Paynet formatiga tushmagan istalgan PDF/matn chekini xarajat sifatida
+// saqlaydi. Dedup uchun matn hash'i (`receipt.ref`) ishlatiladi.
+export async function saveGenericExpense(
+  userId: string,
+  receipt: GenericReceipt
+): Promise<ReceiptSaveResult> {
+  const existing = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(and(eq(expenses.userId, userId), eq(expenses.externalRef, receipt.ref)))
+    .limit(1);
+  if (existing.length > 0) {
+    return { status: "duplicate" };
+  }
+
+  const card = await getOrCreatePdfCard(userId);
+
+  await db.insert(expenses).values({
+    userId,
+    cardId: card.id,
+    title: receipt.title,
+    category: "Chek",
+    amount: receipt.amount,
+    externalRef: receipt.ref,
     spentAt: receipt.spentAt,
   });
 
