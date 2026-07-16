@@ -137,13 +137,13 @@
   <div class="overview">
     <div class="stat"><div class="num">4</div><div class="label">Jami sprint</div></div>
     <div class="stat"><div class="num" style="color:var(--green)">0</div><div class="label">Bajarilgan</div></div>
-    <div class="stat"><div class="num" style="color:var(--yellow)">1</div><div class="label">Jarayonda</div></div>
-    <div class="stat"><div class="num" style="color:var(--gray)">3</div><div class="label">Rejalashtirilgan</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">2</div><div class="label">Jarayonda</div></div>
+    <div class="stat"><div class="num" style="color:var(--gray)">2</div><div class="label">Rejalashtirilgan</div></div>
   </div>
 
   <div class="progress-wrap">
-    <div class="progress-label"><span>Umumiy progress</span><span>13%</span></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:13%"></div></div>
+    <div class="progress-label"><span>Umumiy progress</span><span>34%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:34%"></div></div>
   </div>
 
   <div class="sprints">
@@ -154,7 +154,7 @@
           <div class="sprint-num">1</div>
           <h2>Dizayn va Ekranlar</h2>
         </div>
-        <span class="badge planned">Rejalashtirilgan</span>
+        <span class="badge progress">Jarayonda</span>
       </div>
       <p class="sprint-desc">UI/UX dizayn tizimi va barcha ekranlarni mock ma'lumot bilan yaratish. Backend yo'q — faqat vizual prototip va navigatsiya.</p>
       <div class="tags">
@@ -174,12 +174,14 @@
         </div>
         <span class="badge progress">Jarayonda</span>
       </div>
-      <p class="sprint-desc">Ma'lumotlar bazasi, backend mantiqi, Telegram orqali kirish va maqsad/vazifalar ustida to'liq CRUD. Neon + Drizzle ulandi (goals/tasks/cards/expenses), Telegram deeplink orqali avtorizatsiya va sessiya ishlaydi (Auth.js o'rniga). Maqsad, Vazifa, Xarajat va Sozlamalar sahifalari dizayn tokenlari + umumiy UI komponentlar bilan to'liq interfeysga ega va real ma'lumot bilan ishlaydi (Sozlamalar — Sprint 1'dagi "E9" ekrani, proaktiv qo'shildi); Google OAuth, takrorlanuvchi vazifa/occurrence va `analyses` sxemasi hali qolgan.</p>
+      <p class="sprint-desc">Ma'lumotlar bazasi, backend mantiqi, Telegram orqali kirish va maqsad/vazifalar ustida to'liq CRUD. Neon + Drizzle ulandi (goals/tasks/cards/expenses), Telegram deeplink orqali avtorizatsiya va sessiya ishlaydi (Auth.js o'rniga). Maqsad, Vazifa, Xarajat va Sozlamalar sahifalari dizayn tokenlari + umumiy UI komponentlar bilan to'liq interfeysga ega va real ma'lumot bilan ishlaydi; Google OAuth ulash oqimi tayyor (manual fetch, googleapis paketsiz); Telegram bot Paynet chekini avtomatik parse qilib xarajat saqlaydi (external_ref dedup bilan); takrorlanuvchi vazifa/occurrence va analyses sxemasi hali qolgan.</p>
       <div class="tags">
         <span class="tag">Neon Postgres</span>
         <span class="tag">Drizzle ORM</span>
         <span class="tag">Telegram deeplink auth</span>
         <span class="tag">Maqsad/Vazifa/Xarajat/Sozlamalar CRUD</span>
+        <span class="tag">Google OAuth ulash</span>
+        <span class="tag">Paynet chek → xarajat bot</span>
       </div>
       <div class="deliverable"><strong>Natija:</strong> Telegram orqali kiriladigan, maqsad va vazifalarni haqiqiy bazada boshqaradigan ishlaydigan ilova.</div>
     </div>

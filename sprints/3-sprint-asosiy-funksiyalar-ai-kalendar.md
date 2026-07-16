@@ -104,3 +104,9 @@ sinxronlanadi va band vaqtlar rejaga ta'sir qiladi.
 - ❌ Avtomatik (Cron) ertalab/kechki tahlil — Sprint 4.
 - ❌ Telegram xabar yuborish — Sprint 4.
 - ❌ Telegram Mini App — Sprint 4.
+
+---
+
+## Hisobot
+
+- **2026-07-16** — Tahlil sahifasi (`/tahlil`) endi DB'dan real statistika hisoblaydi (commit ae02fd5): `src/lib/actions/analytics.ts` server action qo'shildi — haftalik vazifa bajarilishi %, faol maqsadlar progressi, umumiy statistikalar (jami vazifa, bajarilgan, maqsadlar soni) hisoblab, sahifaga uzatiladi. Bu Sprint 3'ning "kontekst yig'uvchi qatlam" va "tahlil tarixi haqiqiy ma'lumot bilan" qismlariga zamin yaratadi. Gemini API integratsiyasi, "Hozir tahlil qil" tugmasi va Google Calendar sinxronizatsiyasi hali bajarilmagan.

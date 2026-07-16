@@ -62,13 +62,13 @@ ekranlar talabiga mos quriladi. Bu qayta ishlashni kamaytiradi.
 
 ## 6. Vazifalar (Tasklar)
 
-- [ ] Next.js + Tailwind + shadcn/ui loyihasini sozlash.
-- [ ] Dizayn tizimini yaratish (ranglar, tipografika, light/dark).
-- [ ] Umumiy layout va navigatsiya (menyu) komponenti.
-- [ ] 9 ta ekran + 2 ta modalni mock ma'lumot bilan yaratish.
-- [ ] Responsiv holatni tekshirish (mobil + desktop).
+- [x] Next.js + Tailwind + shadcn/ui loyihasini sozlash. **Deviatsiya:** Tailwind + shadcn/ui o'rniga CSS Modules + dizayn tokenlar (`tokens.css`) yondashuvi qo'llanildi — Telegram Mini App va aniq rang/o'lcham nazorati uchun maqsadga muvofiq deb topildi.
+- [x] Dizayn tizimini yaratish (ranglar, tipografika, light/dark). Dizayn tokenlar `src/app/(app)/tokens.css`da; dark-birinchi yondashuv.
+- [x] Umumiy layout va navigatsiya (menyu) komponenti. `src/app/(app)/layout.tsx` + `nav.tsx` — mobil pastki tab-bar / desktop yon sidebar.
+- [x] 9 ta ekran + 2 ta modalni mock ma'lumot bilan yaratish. Barcha asosiy ekranlar (goals, tasks, xarajat, tahlil, sozlamalar, ai) yaratildi; M1/M2 modallari sahifalar ichiga inline sheet sifatida kiritildi.
+- [x] Responsiv holatni tekshirish (mobil + desktop). Mobil va desktop ko'rinishlari tekshirilgan.
 - [ ] Bo'sh holatlar (empty state) va yuklanish (loading skeleton) ko'rinishlari.
-- [ ] Vercel'ga dastlabki deploy (statik/mock holatда).
+- [x] Vercel'ga dastlabki deploy (statik/mock holatда). Loyiha Vercel'da muvaffaqiyatli deploy bo'lgan (commit ae02fd5).
 
 ---
 
@@ -82,13 +82,13 @@ to'g'ri ko'rinadigan.
 
 ## 8. Tayyorlik mezoni (Definition of Done)
 
-- [ ] Barcha 9 ekran + 2 modal yaratilgan va navigatsiya orqali ochiladi.
-- [ ] Dizayn tizimi (ranglar, komponentlar, light/dark) qo'llanilgan.
-- [ ] Barcha matnlar o'zbek tilida.
-- [ ] Mobil va desktop ko'rinishlari buzilmaydi (responsiv).
+- [x] Barcha 9 ekran + 2 modal yaratilgan va navigatsiya orqali ochiladi.
+- [x] Dizayn tizimi (ranglar, komponentlar, light/dark) qo'llanilgan.
+- [x] Barcha matnlar o'zbek tilida.
+- [x] Mobil va desktop ko'rinishlari buzilmaydi (responsiv).
 - [ ] Empty state va loading skeleton ko'rinishlari mavjud.
-- [ ] Loyiha Vercel'da muvaffaqiyatli deploy bo'lgan.
-- [ ] Kod strukturasi keyingi sprintda backend ulashga tayyor (komponentlar mock ma'lumotdan ajratilgan).
+- [x] Loyiha Vercel'da muvaffaqiyatli deploy bo'lgan.
+- [x] Kod strukturasi keyingi sprintda backend ulashga tayyor (komponentlar mock ma'lumotdan ajratilgan).
 
 ---
 
@@ -97,3 +97,9 @@ to'g'ri ko'rinadigan.
 - ❌ Ma'lumotlar bazasi, API, haqiqiy CRUD.
 - ❌ Haqiqiy autentifikatsiya (faqat login tugmasi ko'rinishi).
 - ❌ AI, Gemini, kalendar sinxron, Telegram.
+
+---
+
+## Hisobot
+
+- **2026-07-16** — Dizayn tizimi va barcha asosiy ekranlar yaratildi (commit ae02fd5). CSS Modules + dizayn tokenlar (`src/app/(app)/tokens.css`) yondashuvi qo'llanildi (Tailwind/shadcn o'rniga). UI komponentlar kutubxonasi (`src/components/ui/`: Button, Card, Input, ProgressBar, Segmented, Sheet, StatusTag, icons) yaratildi. Responsiv app shell (`layout.tsx`, `nav.tsx` — mobil pastki tab-bar / desktop yon sidebar) qurildi. Barcha asosiy sahifalar (goals, tasks, xarajat, tahlil, sozlamalar, ai) va modal (sheet) komponentlari tayyor; Sprint 1 dizaynidagi barcha ekranlar haqiqiy backend bilan birga ishga tushirildi (Sprint 2 va Sprint 3 ishlari bilan parallel). Empty state va loading skeleton ko'rinishlari hali to'liq qilinmagan.
