@@ -67,7 +67,7 @@ ekranlar talabiga mos quriladi. Bu qayta ishlashni kamaytiradi.
 - [x] Umumiy layout va navigatsiya (menyu) komponenti. `src/app/(app)/layout.tsx` + `nav.tsx` — mobil pastki tab-bar / desktop yon sidebar.
 - [x] 9 ta ekran + 2 ta modalni mock ma'lumot bilan yaratish. Barcha asosiy ekranlar (goals, tasks, xarajat, tahlil, sozlamalar, ai) yaratildi; M1/M2 modallari sahifalar ichiga inline sheet sifatida kiritildi.
 - [x] Responsiv holatni tekshirish (mobil + desktop). Mobil va desktop ko'rinishlari tekshirilgan.
-- [ ] Bo'sh holatlar (empty state) va yuklanish (loading skeleton) ko'rinishlari.
+- [x] Bo'sh holatlar (empty state) va yuklanish (loading skeleton) ko'rinishlari. Empty state barcha ro'yxatlarda (goals, tasks, xarajat) mavjudligi tasdiqlandi; umumiy `ListSkeleton` komponenti (`src/app/(app)/list-skeleton.tsx` + `skeleton.module.css`, shimmer animatsiya, prefers-reduced-motion qo'llab-quvvatlanadi) va har bir sahifa uchun alohida `loading.tsx` (/, /tasks, /xarajat, /tahlil, /sozlamalar) qo'shildi.
 - [x] Vercel'ga dastlabki deploy (statik/mock holatда). Loyiha Vercel'da muvaffaqiyatli deploy bo'lgan (commit ae02fd5).
 
 ---
@@ -86,7 +86,7 @@ to'g'ri ko'rinadigan.
 - [x] Dizayn tizimi (ranglar, komponentlar, light/dark) qo'llanilgan.
 - [x] Barcha matnlar o'zbek tilida.
 - [x] Mobil va desktop ko'rinishlari buzilmaydi (responsiv).
-- [ ] Empty state va loading skeleton ko'rinishlari mavjud.
+- [x] Empty state va loading skeleton ko'rinishlari mavjud.
 - [x] Loyiha Vercel'da muvaffaqiyatli deploy bo'lgan.
 - [x] Kod strukturasi keyingi sprintda backend ulashga tayyor (komponentlar mock ma'lumotdan ajratilgan).
 
@@ -103,3 +103,4 @@ to'g'ri ko'rinadigan.
 ## Hisobot
 
 - **2026-07-16** — Dizayn tizimi va barcha asosiy ekranlar yaratildi (commit ae02fd5). CSS Modules + dizayn tokenlar (`src/app/(app)/tokens.css`) yondashuvi qo'llanildi (Tailwind/shadcn o'rniga). UI komponentlar kutubxonasi (`src/components/ui/`: Button, Card, Input, ProgressBar, Segmented, Sheet, StatusTag, icons) yaratildi. Responsiv app shell (`layout.tsx`, `nav.tsx` — mobil pastki tab-bar / desktop yon sidebar) qurildi. Barcha asosiy sahifalar (goals, tasks, xarajat, tahlil, sozlamalar, ai) va modal (sheet) komponentlari tayyor; Sprint 1 dizaynidagi barcha ekranlar haqiqiy backend bilan birga ishga tushirildi (Sprint 2 va Sprint 3 ishlari bilan parallel). Empty state va loading skeleton ko'rinishlari hali to'liq qilinmagan.
+- **2026-07-16** — Sprint 1 to'liq tugallandi (commit 81f0b4e). Empty state ko'rinishlari barcha ro'yxatlarda (goals, tasks, xarajat) mavjudligi tasdiqlandi. Loading skeleton to'liq qo'shildi: umumiy `ListSkeleton` (`src/app/(app)/list-skeleton.tsx` + `skeleton.module.css`, shimmer animatsiya, `prefers-reduced-motion` qo'llab-quvvatlanadi) va har bir sahifa uchun `loading.tsx` (/, /tasks, /xarajat, /tahlil, /sozlamalar). Sprint 1 barcha tayyorlik mezonlari bajarilgan deb hisoblanadi.
