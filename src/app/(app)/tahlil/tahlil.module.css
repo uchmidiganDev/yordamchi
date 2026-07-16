@@ -1,0 +1,109 @@
+.wrap {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.statCard {
+  text-align: center;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  color: var(--color-primary);
+}
+
+.statLabel {
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-body);
+}
+
+.hint {
+  margin: -8px 0 16px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 140px;
+}
+
+.chartCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  height: 100%;
+}
+
+.chartBarTrack {
+  flex: 1;
+  width: 100%;
+  max-width: 28px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--purple-100);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.chartBar {
+  width: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.chartLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.goalList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.goalRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goalTop {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+.goalPct {
+  color: var(--text-muted);
+}
+
+@media (min-width: 860px) {
+  .statsRow {
+    max-width: 480px;
+  }
+}

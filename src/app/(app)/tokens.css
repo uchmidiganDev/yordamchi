@@ -1,0 +1,80 @@
+/* Dizayn tizimi tokenlari — "Maqsadlarim uygulamasi" handoff asosida.
+   Faqat (app) marshrut guruhida ishlatiladi, login sahifasiga taalluqli emas. */
+:root {
+  /* Brand */
+  --purple-600: #6934bf;
+  --purple-700: #5a2ba6;
+  --purple-500: #7d4fca;
+  --purple-100: #ede7f7;
+
+  /* Neytral */
+  --bg: #dfdae8;
+  --surface: #ffffff;
+  --ink-900: #1e293b;
+  --ink-500: #64748b;
+  --ink-300: #94a3b8;
+  --line: #e2e0ea;
+
+  /* Semantik holat */
+  --done: #16a34a;
+  --done-tint: #dcfce7;
+  --pending: #f59e0b;
+  --pending-tint: #fef3c7;
+
+  /* Semantik alias */
+  --color-primary: var(--purple-600);
+  --color-primary-hover: var(--purple-500);
+  --color-primary-press: var(--purple-700);
+  --color-on-primary: #ffffff;
+
+  --color-bg: var(--bg);
+  --surface-card: var(--surface);
+  --border-subtle: var(--line);
+
+  --text-body: var(--ink-900);
+  --text-muted: var(--ink-500);
+  --text-placeholder: var(--ink-300);
+
+  --status-done-fg: var(--done);
+  --status-done-bg: var(--done-tint);
+  --status-pending-fg: var(--pending);
+  --status-pending-bg: var(--pending-tint);
+
+  /* Tipografika */
+  --font-display: var(--font-marko-one), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-marko-one), Georgia, "Times New Roman", serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 48px;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-body: 1.55;
+
+  --weight-regular: 400;
+
+  /* Spacing — 8px shkala */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 40px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radius va soya */
+  --radius-sm: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(30, 41, 59, 0.06), 0 2px 8px rgba(30, 41, 59, 0.05);
+  --shadow-hover: 0 2px 4px rgba(30, 41, 59, 0.08), 0 6px 16px rgba(30, 41, 59, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(105, 52, 191, 0.22);
+}

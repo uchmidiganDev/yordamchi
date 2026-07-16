@@ -1,0 +1,17 @@
+.card {
+  background: var(--surface-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-body);
+  font-family: var(--font-body);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-1px);
+}

@@ -1,0 +1,134 @@
+.section + .section {
+  margin-top: 20px;
+}
+
+.sectionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-subtle);
+  background: var(--surface-card);
+  display: grid;
+  place-items: center;
+  color: var(--color-on-primary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.checkOn {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titleDone {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.metaDue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.priority {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+}
+
+.p_high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.p_mid {
+  background: var(--status-pending-bg);
+  color: var(--status-pending-fg);
+}
+
+.p_low {
+  background: var(--purple-100);
+  color: var(--text-muted);
+}
+
+.goalTag {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--purple-100);
+  color: var(--purple-600);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.fieldLabel {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+.select {
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-body);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.sheetFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

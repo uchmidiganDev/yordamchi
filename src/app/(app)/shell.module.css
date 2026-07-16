@@ -1,0 +1,19 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  color: var(--text-body);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 16px calc(88px + env(safe-area-inset-bottom, 0));
+}
+
+@media (min-width: 860px) {
+  .main {
+    padding: 40px 48px 64px;
+  }
+}

@@ -1,0 +1,25 @@
+.head {
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+@media (min-width: 860px) {
+  .head {
+    margin-bottom: 28px;
+  }
+  .title {
+    font-size: var(--text-3xl);
+  }
+}

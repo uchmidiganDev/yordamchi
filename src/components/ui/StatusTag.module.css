@@ -1,0 +1,42 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.done {
+  color: var(--status-done-fg);
+  background: var(--status-done-bg);
+}
+.done .dot {
+  background: var(--status-done-fg);
+}
+
+.pending {
+  color: var(--status-pending-fg);
+  background: var(--status-pending-bg);
+}
+.pending .dot {
+  background: var(--status-pending-fg);
+}
+
+.neutral {
+  color: var(--text-muted);
+  background: var(--purple-100);
+}
+.neutral .dot {
+  background: var(--text-muted);
+}

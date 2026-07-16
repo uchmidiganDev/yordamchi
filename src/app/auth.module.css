@@ -1,0 +1,244 @@
+.page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Soft ambient background glows */
+.page::before,
+.page::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.page::before {
+  width: 460px;
+  height: 460px;
+  top: -160px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.35), transparent 70%);
+}
+
+.page::after {
+  width: 420px;
+  height: 420px;
+  bottom: -180px;
+  left: -120px;
+  background: radial-gradient(circle, rgba(34, 158, 217, 0.28), transparent 70%);
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 40px 34px 34px;
+  text-align: center;
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 10px 24px -8px var(--ring);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.title {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 14.5px;
+  color: var(--muted);
+  margin-bottom: 28px;
+  line-height: 1.55;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.buttonTelegram {
+  background: linear-gradient(135deg, var(--telegram), var(--telegram-strong));
+  box-shadow: 0 12px 26px -10px rgba(34, 158, 217, 0.75);
+}
+
+.buttonTelegram:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px -10px rgba(34, 158, 217, 0.8);
+}
+
+.buttonTelegram:active {
+  transform: translateY(0);
+}
+
+.buttonSecondary {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 12px 26px -10px var(--ring);
+}
+
+.buttonSecondary:hover {
+  transform: translateY(-2px);
+}
+
+.tgIcon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+/* Pending state */
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--card-border);
+  border-top-color: var(--telegram);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hint {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.deepLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--brand-soft);
+  border: 1px dashed var(--card-border);
+  color: var(--brand-strong);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.deepLink:hover {
+  background: var(--card);
+  border-color: var(--brand);
+}
+
+/* Status badge (expired) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  font-size: 26px;
+}
+
+.badgeExpired {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.expiredBox {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.footer {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--card-border);
+  font-size: 12.5px;
+  color: var(--muted-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.lock {
+  font-size: 13px;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 32px 24px 28px;
+  }
+  .title {
+    font-size: 22px;
+  }
+}
