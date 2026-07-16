@@ -10,6 +10,7 @@ import { CalendarIcon, EditIcon, TrashIcon } from "@/components/ui/icons";
 import {
   createTask,
   deleteTask,
+  toggleOccurrence,
   toggleTaskStatus,
   updateTask,
 } from "@/lib/actions/tasks";
@@ -19,6 +20,7 @@ import listStyles from "../list.module.css";
 import styles from "./tasks.module.css";
 
 type Priority = "high" | "mid" | "low";
+type Recurrence = "none" | "daily" | "weekly" | "monthly";
 
 type Task = {
   id: string;
@@ -26,6 +28,8 @@ type Task = {
   dueAt: string | null;
   priority: Priority;
   status: "active" | "done" | "pending";
+  recurrence: Recurrence;
+  todayDone: boolean;
   goalId: string | null;
   goalTitle: string | null;
 };
@@ -36,6 +40,13 @@ const PRIORITY_LABEL: Record<Priority, string> = {
   high: "Yuqori",
   mid: "O'rta",
   low: "Past",
+};
+
+const RECURRENCE_LABEL: Record<Recurrence, string> = {
+  none: "Bir martalik",
+  daily: "Har kuni",
+  weekly: "Har hafta",
+  monthly: "Har oy",
 };
 
 function formatDueAt(dueAt: string | null) {
@@ -67,12 +78,16 @@ function TaskForm({
     goalId: string | null;
     dueAt: string;
     priority: Priority;
+    recurrence: Recurrence;
   }) => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [goalId, setGoalId] = useState(initial?.goalId ?? "");
   const [dueAt, setDueAt] = useState(toDatetimeLocal(initial?.dueAt ?? null));
   const [priority, setPriority] = useState<Priority>(initial?.priority ?? "mid");
+  const [recurrence, setRecurrence] = useState<Recurrence>(
+    initial?.recurrence ?? "none"
+  );
   const [err, setErr] = useState(false);
 
   function submit() {
@@ -80,7 +95,7 @@ function TaskForm({
       setErr(true);
       return;
     }
-    onSubmit({ title, goalId: goalId || null, dueAt, priority });
+    onSubmit({ title, goalId: goalId || null, dueAt, priority, recurrence });
   }
 
   return (
@@ -129,6 +144,19 @@ function TaskForm({
           onChange={setPriority}
         />
       </div>
+      <div className={styles.field}>
+        <label className={styles.fieldLabel}>Takrorlanish</label>
+        <select
+          className={styles.select}
+          value={recurrence}
+          onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+        >
+          <option value="none">Bir martalik</option>
+          <option value="daily">Har kuni</option>
+          <option value="weekly">Har hafta</option>
+          <option value="monthly">Har oy</option>
+        </select>
+      </div>
       <div className={styles.sheetFoot}>
         <Button variant="secondary" onClick={onCancel}>
           Bekor qilish
@@ -152,7 +180,8 @@ function TaskRow({
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
 }) {
-  const done = task.status === "done";
+  const recurring = task.recurrence !== "none";
+  const done = recurring ? task.todayDone : task.status === "done";
   return (
     <Card padding="14px">
       <div className={styles.row}>
@@ -174,10 +203,14 @@ function TaskRow({
             <span className={`${styles.priority} ${styles[`p_${task.priority}`]}`}>
               {PRIORITY_LABEL[task.priority]}
             </span>
-            <span className={styles.metaDue}>
-              <CalendarIcon />
-              {formatDueAt(task.dueAt)}
-            </span>
+            {recurring ? (
+              <span className={styles.recurTag}>{RECURRENCE_LABEL[task.recurrence]}</span>
+            ) : (
+              <span className={styles.metaDue}>
+                <CalendarIcon />
+                {formatDueAt(task.dueAt)}
+              </span>
+            )}
             {task.goalTitle && <span className={styles.goalTag}>{task.goalTitle}</span>}
           </div>
         </div>
@@ -213,8 +246,13 @@ export function TasksClient({
   const groups = useMemo(() => {
     const now = new Date();
     const todayStr = now.toDateString();
-    const active = tasks.filter((t) => t.status !== "done");
-    const done = tasks.filter((t) => t.status === "done");
+
+    // Takrorlanuvchi vazifalar alohida — ular har kuni ko'rinadi.
+    const recurring = tasks.filter((t) => t.recurrence !== "none");
+    const oneOff = tasks.filter((t) => t.recurrence === "none");
+
+    const active = oneOff.filter((t) => t.status !== "done");
+    const done = oneOff.filter((t) => t.status === "done");
 
     const overdue: Task[] = [];
     const today: Task[] = [];
@@ -232,7 +270,7 @@ export function TasksClient({
       else upcoming.push(t);
     }
 
-    return { overdue, today, upcoming, noDate, done };
+    return { recurring, overdue, today, upcoming, noDate, done };
   }, [tasks]);
 
   function openAdd() {
@@ -259,6 +297,7 @@ export function TasksClient({
     goalId: string | null;
     dueAt: string;
     priority: Priority;
+    recurrence: Recurrence;
   }) {
     const optimistic: Task = {
       id: `tmp-${Date.now()}`,
@@ -266,6 +305,8 @@ export function TasksClient({
       dueAt: data.dueAt ? new Date(data.dueAt).toISOString() : null,
       priority: data.priority,
       status: "pending",
+      recurrence: data.recurrence,
+      todayDone: false,
       goalId: data.goalId,
       goalTitle: goalTitleFor(data.goalId),
     };
@@ -278,7 +319,13 @@ export function TasksClient({
 
   function handleUpdate(
     id: string,
-    data: { title: string; goalId: string | null; dueAt: string; priority: Priority }
+    data: {
+      title: string;
+      goalId: string | null;
+      dueAt: string;
+      priority: Priority;
+      recurrence: Recurrence;
+    }
   ) {
     setTasks((ts) =>
       ts.map((t) =>
@@ -288,6 +335,7 @@ export function TasksClient({
               title: data.title,
               dueAt: data.dueAt ? new Date(data.dueAt).toISOString() : null,
               priority: data.priority,
+              recurrence: data.recurrence,
               goalId: data.goalId,
               goalTitle: goalTitleFor(data.goalId),
             }
@@ -301,6 +349,17 @@ export function TasksClient({
   }
 
   function handleToggle(task: Task) {
+    if (task.recurrence !== "none") {
+      // Takrorlanuvchi vazifa: bugungi occurrence holatini almashtiramiz.
+      const done = !task.todayDone;
+      setTasks((ts) =>
+        ts.map((t) => (t.id === task.id ? { ...t, todayDone: done } : t))
+      );
+      startTransition(async () => {
+        await toggleOccurrence(task.id, done);
+      });
+      return;
+    }
     const done = task.status !== "done";
     setTasks((ts) => ts.map((t) => (t.id === task.id ? { ...t, status: done ? "done" : "pending" } : t)));
     startTransition(async () => {
@@ -317,6 +376,7 @@ export function TasksClient({
   }
 
   const sections: { label: string; items: Task[] }[] = [
+    { label: "Takrorlanuvchi (bugun)", items: groups.recurring },
     { label: "Muddati o'tgan", items: groups.overdue },
     { label: "Bugun", items: groups.today },
     { label: "Keyingi", items: groups.upcoming },

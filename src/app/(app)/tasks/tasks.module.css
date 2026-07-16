@@ -97,6 +97,13 @@
   color: var(--purple-600);
 }
 
+.recurTag {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--purple-100);
+  color: var(--color-primary);
+}
+
 .field {
   display: flex;
   flex-direction: column;

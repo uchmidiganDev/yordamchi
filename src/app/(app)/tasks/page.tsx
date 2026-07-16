@@ -13,6 +13,8 @@ export default async function TasksPage() {
         dueAt: t.dueAt ? t.dueAt.toISOString() : null,
         priority: t.priority,
         status: t.status,
+        recurrence: t.recurrence,
+        todayDone: t.todayDone,
         goalId: t.goalId,
         goalTitle: t.goalTitle,
       }))}
