@@ -4,6 +4,11 @@ import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { goals, tasks, taskOccurrences } from "@/db/schema";
+import {
+  createTaskEvent,
+  deleteTaskEvent,
+  updateTaskEvent,
+} from "@/lib/google-calendar";
 import { requireUserId } from "./require-user";
 
 export type Recurrence = "none" | "daily" | "weekly" | "monthly";
@@ -34,6 +39,49 @@ function parseDueAt(raw?: string): Date | null {
 function localDateStr(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Google Calendar chiqish sinxroni (vazifa → event). Faqat vaqti belgilangan
+// bir martalik vazifalar sinxronlanadi. Best-effort: kalendar xatosi CRUD
+// amalini to'xtatmasligi kerak.
+async function syncTaskToCalendar(
+  userId: string,
+  row: {
+    id: string;
+    title: string;
+    dueAt: Date | null;
+    recurrence: string;
+    googleEventId: string | null;
+  }
+) {
+  try {
+    const syncable = row.dueAt !== null && row.recurrence === "none";
+
+    if (!syncable) {
+      if (row.googleEventId) {
+        await deleteTaskEvent(userId, row.googleEventId);
+        await db
+          .update(tasks)
+          .set({ googleEventId: null })
+          .where(eq(tasks.id, row.id));
+      }
+      return;
+    }
+
+    const payload = { id: row.id, title: row.title, dueAt: row.dueAt! };
+    const eventId = row.googleEventId
+      ? await updateTaskEvent(userId, row.googleEventId, payload)
+      : await createTaskEvent(userId, payload);
+
+    if (eventId !== row.googleEventId) {
+      await db
+        .update(tasks)
+        .set({ googleEventId: eventId })
+        .where(eq(tasks.id, row.id));
+    }
+  } catch (e) {
+    console.error("Google Calendar sinxron xatosi:", e);
+  }
 }
 
 export async function listTasksWithGoal() {
@@ -89,13 +137,24 @@ export async function createTask(input: TaskInput) {
   }
   const dueAt = parseDueAt(input.dueAt);
 
-  await db.insert(tasks).values({
-    userId,
+  const [row] = await db
+    .insert(tasks)
+    .values({
+      userId,
+      title,
+      goalId: input.goalId || null,
+      dueAt,
+      priority: input.priority,
+      recurrence,
+    })
+    .returning({ id: tasks.id });
+
+  await syncTaskToCalendar(userId, {
+    id: row.id,
     title,
-    goalId: input.goalId || null,
     dueAt,
-    priority: input.priority,
     recurrence,
+    googleEventId: null,
   });
 
   revalidatePath("/tasks");
@@ -112,7 +171,7 @@ export async function updateTask(id: string, input: Partial<TaskInput>) {
     throw new Error("Takrorlanish qiymati noto'g'ri");
   }
 
-  await db
+  const [row] = await db
     .update(tasks)
     .set({
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
@@ -123,7 +182,18 @@ export async function updateTask(id: string, input: Partial<TaskInput>) {
         ? { recurrence: input.recurrence }
         : {}),
     })
-    .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+    .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+    .returning({
+      id: tasks.id,
+      title: tasks.title,
+      dueAt: tasks.dueAt,
+      recurrence: tasks.recurrence,
+      googleEventId: tasks.googleEventId,
+    });
+
+  if (row) {
+    await syncTaskToCalendar(userId, row);
+  }
 
   revalidatePath("/tasks");
 }
@@ -182,6 +252,18 @@ export async function toggleOccurrence(
 
 export async function deleteTask(id: string) {
   const userId = await requireUserId();
-  await db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+  const [row] = await db
+    .delete(tasks)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+    .returning({ googleEventId: tasks.googleEventId });
+
+  if (row?.googleEventId) {
+    try {
+      await deleteTaskEvent(userId, row.googleEventId);
+    } catch (e) {
+      console.error("Google Calendar event o'chirish xatosi:", e);
+    }
+  }
+
   revalidatePath("/tasks");
 }

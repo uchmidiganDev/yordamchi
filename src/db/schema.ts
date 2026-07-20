@@ -95,6 +95,8 @@ export const tasks = pgTable("tasks", {
   priority: taskPriority("priority").notNull().default("mid"),
   status: taskStatus("status").notNull().default("pending"),
   recurrence: taskRecurrence("recurrence").notNull().default("none"),
+  // Google Calendar'dagi mos event ID'si (chiqish sinxroni uchun).
+  googleEventId: text("google_event_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

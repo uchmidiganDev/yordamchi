@@ -134,8 +134,9 @@ export function SozlamalarClient({
             <p className={styles.hint}>Google kalendarni ulashda xatolik yuz berdi. Qaytadan urinib ko&apos;ring.</p>
           )}
           <p className={styles.hint}>
-            Vazifa va maqsad muddatlarini Google kalendar bilan sinxronlash keyingi sprintda qo&apos;shiladi.
-            Hozircha faqat hisobingizni ulash mumkin.
+            Ulangandan so&apos;ng vaqti belgilangan vazifalar Google kalendarga
+            avtomatik yoziladi, kalendaringizdagi band vaqtlar esa Kalendar
+            sahifasida va AI rejasida hisobga olinadi.
           </p>
           {initial.googleConnected ? (
             <Button variant="secondary" onClick={handleDisconnectGoogle} disabled={isGooglePending}>

@@ -137,13 +137,13 @@
   <div class="overview">
     <div class="stat"><div class="num">4</div><div class="label">Jami sprint</div></div>
     <div class="stat"><div class="num" style="color:var(--green)">2</div><div class="label">Bajarilgan</div></div>
-    <div class="stat"><div class="num" style="color:var(--yellow)">0</div><div class="label">Jarayonda</div></div>
-    <div class="stat"><div class="num" style="color:var(--gray)">2</div><div class="label">Rejalashtirilgan</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">1</div><div class="label">Jarayonda</div></div>
+    <div class="stat"><div class="num" style="color:var(--gray)">1</div><div class="label">Rejalashtirilgan</div></div>
   </div>
 
   <div class="progress-wrap">
-    <div class="progress-label"><span>Umumiy progress</span><span>45%</span></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+    <div class="progress-label"><span>Umumiy progress</span><span>68%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
   </div>
 
   <div class="sprints">
@@ -193,16 +193,17 @@
           <div class="sprint-num">3</div>
           <h2>Asosiy Funksiyalar, AI va Kalendar</h2>
         </div>
-        <span class="badge planned">Rejalashtirilgan</span>
+        <span class="badge progress">Jarayonda</span>
       </div>
-      <p class="sprint-desc">Google Gemini AI yadrosi (kunlik tahlil, ertangi reja, progress, maqsadni bo'lish) va Google Calendar ikki tomonlama sinxronizatsiya.</p>
+      <p class="sprint-desc">Google Gemini AI yadrosi (kunlik tahlil, ertangi reja, progress, maqsadni bo'lish) va Google Calendar ikki tomonlama sinxronizatsiya. `GEMINI_API_KEY` kiritildi va 2026-07-20'da `scripts/smoke-sprint3.ts` orqali jonli sinov o'tkazildi: Gemini ulanishi va A–E tahlil (xulosa, ertangi reja, ogohlantirish, progress, motivatsiya) haqiqiy DB ma'lumotlari bilan to'g'ri ishladi. Google Calendar hali ulanmagan (`users.googleRefreshToken` bo'sh) — shu sabab kalendar sinxroni, F (maqsadni bo'lish) va tahlil tarixiga saqlash hali jonli sinalmagan.</p>
       <div class="tags">
-        <span class="tag">Gemini API (A–F)</span>
-        <span class="tag">Google Calendar sinxron</span>
+        <span class="tag">Gemini API (A–E jonli sinovdan o'tdi)</span>
+        <span class="tag">Google Calendar sinxron (fetch, ulanish kutilmoqda)</span>
         <span class="tag">Talab bo'yicha tahlil</span>
         <span class="tag">Band vaqtlar</span>
+        <span class="tag">smoke-test skripti</span>
       </div>
-      <div class="deliverable"><strong>Natija:</strong> Tugma bosilganda Gemini to'liq tahlil beradi; vazifalar Google Calendar bilan sinxronlanadi va band vaqtlar rejaga ta'sir qiladi.</div>
+      <div class="deliverable"><strong>Natija:</strong> Tugma bosilganda Gemini to'liq tahlil beradi; vazifalar Google Calendar bilan sinxronlanadi va band vaqtlar rejaga ta'sir qiladi. (Gemini A–E jonli sinovdan o'tdi; Google Calendar ulanib, F va kalendar sinxroni sinalgach DoD to'liq yopiladi.)</div>
     </div>
 
     <div class="sprint">

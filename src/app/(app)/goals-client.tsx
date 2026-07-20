@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StatusTag } from "@/components/ui/StatusTag";
 import { Sheet } from "@/components/ui/Sheet";
-import { CalendarIcon, EditIcon, TrashIcon } from "@/components/ui/icons";
+import { AiIcon, CalendarIcon, EditIcon, TrashIcon } from "@/components/ui/icons";
+import {
+  addGoalTasks,
+  suggestGoalTasks,
+  type SuggestedTask,
+} from "@/lib/actions/ai";
 import { createGoal, deleteGoal, updateGoal } from "@/lib/actions/goals";
 import { formatDateUz } from "@/lib/format-date";
 import { PageHeader } from "./page-header";
@@ -133,9 +138,129 @@ function GoalForm({
   );
 }
 
+const PRIORITY_LABEL: Record<SuggestedTask["priority"], string> = {
+  high: "Yuqori",
+  mid: "O'rta",
+  low: "Past",
+};
+
+// "AI bilan bo'lish" (F): maqsadni Gemini kichik vazifalarga ajratadi,
+// foydalanuvchi keraklilarini belgilab tasdiqlaydi.
+function AiSplitSheet({ goal, onClose }: { goal: Goal; onClose: () => void }) {
+  const [phase, setPhase] = useState<"loading" | "ready" | "error" | "saving">(
+    "loading"
+  );
+  const [error, setError] = useState("");
+  const [suggestions, setSuggestions] = useState<SuggestedTask[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    let cancelled = false;
+    suggestGoalTasks(goal.id).then((res) => {
+      if (cancelled) return;
+      if (res.ok) {
+        setSuggestions(res.data);
+        setSelected(new Set(res.data.map((_, i) => i)));
+        setPhase("ready");
+      } else {
+        setError(res.error);
+        setPhase("error");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [goal.id]);
+
+  function toggle(i: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  function handleAdd() {
+    const items = suggestions.filter((_, i) => selected.has(i));
+    if (items.length === 0) return;
+    setPhase("saving");
+    startTransition(async () => {
+      const res = await addGoalTasks(goal.id, items);
+      if (res.ok) {
+        onClose();
+      } else {
+        setError(res.error);
+        setPhase("error");
+      }
+    });
+  }
+
+  return (
+    <Sheet title="AI bilan bo'lish" subtitle={goal.title} onClose={onClose}>
+      {phase === "loading" && (
+        <p className={styles.suggestState}>
+          AI maqsadni vazifalarga ajratmoqda…
+        </p>
+      )}
+
+      {phase === "error" && <p className={styles.suggestError}>{error}</p>}
+
+      {(phase === "ready" || phase === "saving") && (
+        <>
+          <p className={styles.suggestHint}>
+            AI taklif qilgan vazifalardan keraklilarini belgilang — ular
+            maqsadga bog&apos;langan holda qo&apos;shiladi.
+          </p>
+          <div className={styles.suggestList}>
+            {suggestions.map((s, i) => {
+              const on = selected.has(i);
+              return (
+                <label
+                  key={i}
+                  className={`${styles.suggestRow} ${on ? styles.suggestRowOn : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    className={styles.suggestCheck}
+                    checked={on}
+                    onChange={() => toggle(i)}
+                  />
+                  <span className={styles.suggestTitle}>{s.title}</span>
+                  <span className={styles.suggestPrio}>
+                    {PRIORITY_LABEL[s.priority]}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <div className={styles.sheetFoot}>
+        <Button variant="secondary" onClick={onClose}>
+          Bekor qilish
+        </Button>
+        {(phase === "ready" || phase === "saving") && (
+          <Button
+            variant="primary"
+            onClick={handleAdd}
+            disabled={phase === "saving" || selected.size === 0}
+          >
+            {phase === "saving"
+              ? "Qo'shilmoqda…"
+              : `${selected.size} ta vazifa qo'shish`}
+          </Button>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
 export function GoalsClient({ initialGoals }: { initialGoals: Goal[] }) {
   const [goals, setGoals] = useState(initialGoals);
-  const [sheet, setSheet] = useState<"add" | "edit" | null>(null);
+  const [sheet, setSheet] = useState<"add" | "edit" | "ai" | null>(null);
   const [editing, setEditing] = useState<Goal | null>(null);
   const [, startTransition] = useTransition();
 
@@ -149,6 +274,11 @@ export function GoalsClient({ initialGoals }: { initialGoals: Goal[] }) {
   function openEdit(goal: Goal) {
     setEditing(goal);
     setSheet("edit");
+  }
+
+  function openAiSplit(goal: Goal) {
+    setEditing(goal);
+    setSheet("ai");
   }
 
   function closeSheet() {
@@ -254,6 +384,16 @@ export function GoalsClient({ initialGoals }: { initialGoals: Goal[] }) {
                   <span className={styles.pct}>{g.progress}%</span>
                 </div>
                 <div className={listStyles.cardActions} style={{ marginTop: 12 }}>
+                  {!done && (
+                    <button
+                      className={styles.aiBtn}
+                      onClick={() => openAiSplit(g)}
+                      title="Maqsadni AI yordamida kichik vazifalarga ajratish"
+                    >
+                      <AiIcon width={14} height={14} />
+                      AI bilan bo&apos;lish
+                    </button>
+                  )}
                   <button className={listStyles.iconBtn} onClick={() => openEdit(g)} aria-label="Tahrirlash">
                     <EditIcon />
                   </button>
@@ -289,6 +429,10 @@ export function GoalsClient({ initialGoals }: { initialGoals: Goal[] }) {
             onSubmit={(data) => handleUpdate(editing.id, data)}
           />
         </Sheet>
+      )}
+
+      {sheet === "ai" && editing && (
+        <AiSplitSheet goal={editing} onClose={closeSheet} />
       )}
     </div>
   );

@@ -112,7 +112,7 @@ function TaskForm({
         autoFocus
       />
       <div className={styles.field}>
-        <label className={styles.fieldLabel}>Bog'liq maqsad</label>
+        <label className={styles.fieldLabel}>Bog&apos;liq maqsad</label>
         <select
           className={styles.select}
           value={goalId}

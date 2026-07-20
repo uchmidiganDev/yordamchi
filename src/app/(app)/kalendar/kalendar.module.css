@@ -1,0 +1,255 @@
+.wrap {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- Kun navigatsiyasi --- */
+
+.dayNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.navArrow {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-body);
+  font-size: var(--text-xl);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.navArrow:hover {
+  background: var(--purple-100);
+}
+
+.dayTitle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dayTitle strong {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-body);
+}
+
+.todayLink {
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.todayLink:hover {
+  text-decoration: underline;
+}
+
+/* --- Hafta chizig'i --- */
+
+.weekStrip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.weekDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.weekDay:hover {
+  background: var(--purple-100);
+}
+
+.weekDayLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.weekDayNum {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+.weekDayToday {
+  border-color: var(--color-primary);
+}
+
+.weekDayOn {
+  background: var(--color-primary);
+}
+
+.weekDayOn:hover {
+  background: var(--color-primary-hover);
+}
+
+.weekDayOn .weekDayLabel,
+.weekDayOn .weekDayNum {
+  color: var(--color-on-primary);
+}
+
+/* --- Ogohlantirish/eslatma --- */
+
+.hintCard {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-body);
+}
+
+.hintCard a {
+  color: var(--color-primary);
+}
+
+/* --- Kun tarkibi --- */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+.itemTime {
+  flex: none;
+  min-width: 88px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.itemTimeEnd {
+  color: var(--text-placeholder);
+}
+
+.itemBar {
+  flex: none;
+  width: 4px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+}
+
+.barTask {
+  background: var(--color-primary);
+}
+
+.barDone {
+  background: var(--done);
+}
+
+.barBusy {
+  background: var(--pending);
+}
+
+.itemTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemDone {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* --- Legenda --- */
+
+.legend {
+  display: flex;
+  gap: 16px;
+  padding: 4px 2px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dotTask {
+  background: var(--color-primary);
+}
+
+.dotBusy {
+  background: var(--pending);
+}
+
+/* --- Bo'sh holat --- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+
+.empty h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--text-body);
+}
+
+.empty p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
