@@ -92,7 +92,7 @@ export async function POST(
       .filter((r): r is { text: string; answer: string } => r.answer !== null)
       .map((r) => ({ question: r.text, answer: r.answer }));
 
-    const answer = await answerAssistantQuestion(bot.userId, text, history);
+    const answer = await answerAssistantQuestion(bot.userId, text, history, fromName ?? fromUsername);
     await logAndReply(answer);
   } catch (error) {
     console.error("[telegram bot webhook] AI Assistant xatosi", error);

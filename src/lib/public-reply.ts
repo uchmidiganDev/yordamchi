@@ -34,9 +34,14 @@ export async function replyAsPublicAssistant(ctx: Context, text: string) {
     return;
   }
 
+  const senderName =
+    [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ") ||
+    ctx.from?.username ||
+    null;
+
   try {
     await ctx.replyWithChatAction("typing");
-    const answer = await answerAssistantQuestion(owner.id, text);
+    const answer = await answerAssistantQuestion(owner.id, text, [], senderName);
     await ctx.reply(answer);
   } catch (error) {
     console.error("[public-reply] AI Assistant xatosi", error);

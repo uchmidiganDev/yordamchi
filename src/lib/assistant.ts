@@ -30,10 +30,13 @@ function formatHistory(history: ConversationTurn[]): string {
 // `history` — shu suhbatdoshning oldingi savol-javoblari (eng eskisidan
 // yangisiga), suhbat davomiyligini ta'minlash uchun promptga qo'shiladi.
 // Bo'sh massiv — kontekstsiz, bir martalik savol (masalan veb-chat).
+// `senderName` — suhbatdoshning ismi (Telegram'dan), berilsa AI javobida
+// tabiiy ravishda undan foydalanadi (masalan salomlashishda ismini aytadi).
 export async function answerAssistantQuestion(
   userId: string,
   question: string,
-  history: ConversationTurn[] = []
+  history: ConversationTurn[] = [],
+  senderName?: string | null
 ): Promise<string> {
   const [[user], entries] = await Promise.all([
     db
@@ -58,6 +61,7 @@ export async function answerAssistantQuestion(
     "=== OLDINGI SUHBAT ===",
     formatHistory(history),
     "",
+    senderName ? `=== SUHBATDOSH ===\nIsmi: ${senderName}. Javobingda tabiiy ravishda ismidan foydalan (masalan salomlashishda), lekin har gapda majburiy takrorlama.\n` : "",
     "=== FOYDALANUVCHI SAVOLI ===",
     question,
   ].join("\n");
