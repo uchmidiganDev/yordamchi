@@ -64,6 +64,13 @@
       "when": 1784639064978,
       "tag": "0008_steep_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784652337813,
+      "tag": "0009_complete_hawkeye",
+      "breakpoints": true
     }
   ]
 }

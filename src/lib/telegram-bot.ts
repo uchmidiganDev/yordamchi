@@ -1,14 +1,16 @@
 import { Bot, Context } from "grammy";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
-import { users, loginTokens } from "@/db/schema";
+import { users, loginTokens, businessMessages } from "@/db/schema";
 import { parsePaynetReceipt } from "./paynet-receipt";
 import { parseGenericReceipt } from "./generic-receipt";
 import { saveReceiptExpense, saveGenericExpense } from "./expense-from-receipt";
 import type { ReceiptSaveResult } from "./expense-from-receipt";
 import { extractPdfText } from "./pdf-text";
-import { answerAssistantQuestion } from "./assistant";
+import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
+
+const BUSINESS_HISTORY_LIMIT = 6;
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
@@ -194,6 +196,91 @@ bot.on("message:text", async (ctx) => {
   const wasReceipt = await handleReceiptText(ctx, text, fromId);
   if (!wasReceipt) {
     await handleAssistantMessage(ctx, text, fromId);
+  }
+});
+
+// Telegram Business: foydalanuvchi botni shaxsiy akkauntiga "AI Assistant"
+// sifatida ulaganda (yoki ulanish holatini o'zgartirganda) keladi. Ulanish
+// holatini bazaga yozib qo'yamiz — funksional jihatdan shart emas (Telegram
+// o'zi qaysi xabarlarni yuborishni boshqaradi), lekin holatni /telegram
+// sahifasida ko'rsatish uchun kerak.
+bot.on("business_connection", async (ctx) => {
+  const conn = ctx.businessConnection;
+  if (!conn || conn.user.id.toString() !== ALLOWED_TELEGRAM_ID) return;
+
+  await db
+    .update(users)
+    .set({
+      businessConnectionId: conn.id,
+      businessConnectionEnabled: conn.is_enabled,
+    })
+    .where(eq(users.telegramId, BigInt(ALLOWED_TELEGRAM_ID as string)));
+
+  console.log("[telegram-bot] Business ulanish yangilandi", {
+    id: conn.id,
+    enabled: conn.is_enabled,
+  });
+});
+
+// Telegram Business orqali shaxsiy akkauntga kelgan xabarlar. Bu yangilanish
+// suhbatning HAR IKKI tomonini o'z ichiga oladi (mijozning xabarlari HAM,
+// egasining telefonidan qo'lda yozgan javoblari HAM) — shuning uchun
+// egasining o'z xabarlarini e'tiborsiz qoldirish SHART, aks holda AI
+// egasining javobiga ham "javob" berishga urinadi.
+bot.on("business_message", async (ctx) => {
+  const msg = ctx.businessMessage;
+  if (!msg || msg.from?.id.toString() === ALLOWED_TELEGRAM_ID) return;
+
+  const text = msg.text;
+  if (!text) {
+    await ctx.reply("Hozircha faqat matnli xabarlarni qabul qila olaman.");
+    return;
+  }
+
+  const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+  if (!owner) return;
+
+  const chatId = msg.chat.id;
+  const fromName =
+    [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || null;
+  const fromUsername = msg.from?.username ?? null;
+
+  async function logAndReply(answer: string) {
+    await ctx.reply(answer);
+    await db.insert(businessMessages).values({
+      userId: owner!.id,
+      chatId: BigInt(chatId),
+      fromName,
+      fromUsername,
+      text: text as string,
+      answer,
+    });
+  }
+
+  try {
+    await ctx.replyWithChatAction("typing");
+
+    const historyRows = await db
+      .select({ text: businessMessages.text, answer: businessMessages.answer })
+      .from(businessMessages)
+      .where(
+        and(eq(businessMessages.userId, owner.id), eq(businessMessages.chatId, BigInt(chatId)))
+      )
+      .orderBy(desc(businessMessages.createdAt))
+      .limit(BUSINESS_HISTORY_LIMIT);
+
+    const history: ConversationTurn[] = historyRows
+      .reverse()
+      .filter((r): r is { text: string; answer: string } => r.answer !== null)
+      .map((r) => ({ question: r.text, answer: r.answer }));
+
+    const answer = await answerAssistantQuestion(owner.id, text, history);
+    await logAndReply(answer);
+  } catch (error) {
+    console.error("[telegram-bot] Business AI Assistant xatosi", error);
+    await logAndReply(
+      "Kechirasiz, hozir javob berishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring."
+    );
   }
 });
 

@@ -42,10 +42,33 @@ export function sendChatAction(token: string, chatId: number | bigint, action: s
   return callTelegramApi(token, "sendChatAction", { chat_id: chatId.toString(), action });
 }
 
-export function setWebhook(token: string, url: string, secretToken: string): Promise<unknown> {
-  return callTelegramApi(token, "setWebhook", { url, secret_token: secretToken });
+// `allowedUpdates` berilmasa, Telegram standart to'plamni yuboradi. Business
+// yangilanishlari (business_connection, business_message va h.k.) shu
+// standart to'plamga kirmasligi mumkin — shuning uchun helperizim_bot uchun
+// har doim aniq ro'yxat bilan chaqiriladi (telegram-bot.ts).
+export function setWebhook(
+  token: string,
+  url: string,
+  secretToken: string,
+  allowedUpdates?: string[]
+): Promise<unknown> {
+  return callTelegramApi(token, "setWebhook", {
+    url,
+    secret_token: secretToken,
+    ...(allowedUpdates ? { allowed_updates: allowedUpdates } : {}),
+  });
 }
 
 export function deleteWebhook(token: string): Promise<unknown> {
   return callTelegramApi(token, "deleteWebhook");
+}
+
+export type TelegramWebhookInfo = {
+  url: string;
+  pending_update_count: number;
+  last_error_message?: string;
+};
+
+export function getWebhookInfo(token: string): Promise<TelegramWebhookInfo> {
+  return callTelegramApi<TelegramWebhookInfo>(token, "getWebhookInfo");
 }

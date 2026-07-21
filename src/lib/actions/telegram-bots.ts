@@ -6,7 +6,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { telegramBots, telegramMessages } from "@/db/schema";
+import { businessMessages, telegramBots, telegramMessages, users } from "@/db/schema";
 import { deleteWebhook, getMe, setWebhook } from "@/lib/telegram-api";
 import { requireUserId } from "./require-user";
 
@@ -46,6 +46,44 @@ export async function listTelegramMessages() {
     .innerJoin(telegramBots, eq(telegramMessages.botId, telegramBots.id))
     .where(eq(telegramMessages.userId, userId))
     .orderBy(desc(telegramMessages.createdAt))
+    .limit(50);
+
+  return rows.map((r) => ({ ...r, createdAtISO: r.createdAt.toISOString() }));
+}
+
+// Telegram Business ulanish holati (shaxsiy akkaunt) — /telegram sahifasida
+// ko'rsatiladi. Ulanish o'zi Telegram Business sozlamalaridan amalga
+// oshiriladi; bu yerda faqat oxirgi ma'lum holat ko'rsatiladi.
+export async function getBusinessConnectionStatus() {
+  const userId = await requireUserId();
+  const [row] = await db
+    .select({
+      businessConnectionId: users.businessConnectionId,
+      businessConnectionEnabled: users.businessConnectionEnabled,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return {
+    connected: Boolean(row?.businessConnectionId && row.businessConnectionEnabled),
+  };
+}
+
+export async function listBusinessMessages() {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({
+      id: businessMessages.id,
+      fromName: businessMessages.fromName,
+      fromUsername: businessMessages.fromUsername,
+      text: businessMessages.text,
+      answer: businessMessages.answer,
+      createdAt: businessMessages.createdAt,
+    })
+    .from(businessMessages)
+    .where(eq(businessMessages.userId, userId))
+    .orderBy(desc(businessMessages.createdAt))
     .limit(50);
 
   return rows.map((r) => ({ ...r, createdAtISO: r.createdAt.toISOString() }));

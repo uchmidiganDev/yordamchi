@@ -56,6 +56,13 @@ export const users = pgTable("users", {
   // AI Assistant uchun moslashtirilgan system prompt. Bo'sh bo'lsa
   // ilovadagi standart prompt ishlatiladi (src/lib/actions/assistant.ts).
   assistantSystemPrompt: text("assistant_system_prompt"),
+  // Telegram Business ulanishi (shaxsiy akkauntga botni "AI Assistant"
+  // sifatida ulash). Telegram'dan kelgan `business_connection` yangilanishi
+  // orqali yoziladi (src/lib/telegram-bot.ts).
+  businessConnectionId: text("business_connection_id"),
+  businessConnectionEnabled: boolean("business_connection_enabled")
+    .notNull()
+    .default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -201,6 +208,26 @@ export const telegramMessages = pgTable("telegram_messages", {
     .defaultNow(),
 });
 
+// Telegram Business orqali shaxsiy akkauntga kelgan xabarlar jurnali.
+// `chatId` (mijoz bilan suhbat) bo'yicha guruhlanadi va oldingi xabarlar
+// keyingi AI chaqiruviga kontekst sifatida uzatiladi — telegram_messages'ga
+// o'xshash, lekin botId'ga bog'liq emas (helperizim_bot telegram_bots
+// jadvaliga kirmaydi).
+export const businessMessages = pgTable("business_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  fromName: text("from_name"),
+  fromUsername: text("from_username"),
+  text: text("text").notNull(),
+  answer: text("answer"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const cards = pgTable("cards", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -255,3 +282,5 @@ export type TelegramBot = typeof telegramBots.$inferSelect;
 export type NewTelegramBot = typeof telegramBots.$inferInsert;
 export type TelegramMessage = typeof telegramMessages.$inferSelect;
 export type NewTelegramMessage = typeof telegramMessages.$inferInsert;
+export type BusinessMessage = typeof businessMessages.$inferSelect;
+export type NewBusinessMessage = typeof businessMessages.$inferInsert;

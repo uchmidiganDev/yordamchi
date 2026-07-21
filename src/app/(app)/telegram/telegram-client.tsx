@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Sheet } from "@/components/ui/Sheet";
+import { StatusTag } from "@/components/ui/StatusTag";
 import { TrashIcon } from "@/components/ui/icons";
 import {
   addTelegramBot,
@@ -26,6 +27,15 @@ type BotView = {
 type MessageView = {
   id: string;
   botUsername: string;
+  fromName: string | null;
+  fromUsername: string | null;
+  text: string;
+  answer: string | null;
+  createdAtISO: string;
+};
+
+type BusinessMessageView = {
+  id: string;
   fromName: string | null;
   fromUsername: string | null;
   text: string;
@@ -140,15 +150,40 @@ function MessageRow({ message }: { message: MessageView }) {
   );
 }
 
+function BusinessMessageRow({ message }: { message: BusinessMessageView }) {
+  const d = new Date(message.createdAtISO);
+  const from = message.fromUsername
+    ? `@${message.fromUsername}`
+    : message.fromName ?? "Noma'lum";
+
+  return (
+    <Card padding="14px">
+      <div className={styles.msgHead}>
+        <span className={styles.msgFrom}>{from}</span>
+        <span className={styles.msgMeta}>
+          {formatDateShortUz(d)}, {formatTimeUz(d)}
+        </span>
+      </div>
+      <p className={styles.msgText}>{message.text}</p>
+      {message.answer && <p className={styles.msgAnswer}>{message.answer}</p>}
+    </Card>
+  );
+}
+
 export function TelegramClient({
   initialBots,
   initialMessages,
+  businessConnected,
+  initialBusinessMessages,
 }: {
   initialBots: BotView[];
   initialMessages: MessageView[];
+  businessConnected: boolean;
+  initialBusinessMessages: BusinessMessageView[];
 }) {
   const [bots, setBots] = useState(initialBots);
   const [messages] = useState(initialMessages);
+  const [businessMessages] = useState(initialBusinessMessages);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -181,6 +216,33 @@ export function TelegramClient({
       />
 
       <div className={styles.wrap}>
+        <Card padding="16px">
+          <div className={styles.switchRow}>
+            <div className={styles.rowBody}>
+              <p className={styles.title}>Telegram Business</p>
+              <p className={styles.hint}>
+                Shaxsiy akkauntingizga yozgan odamlarga AI Assistant avtomatik
+                javob beradi. Ulash uchun Telegram &gt; Sozlamalar &gt; Telegram
+                Business &gt; Chatbots bo&apos;limidan helperizim_bot&apos;ni tanlang.
+              </p>
+            </div>
+            <StatusTag status={businessConnected ? "done" : "pending"}>
+              {businessConnected ? "Ulangan" : "Ulanmagan"}
+            </StatusTag>
+          </div>
+        </Card>
+
+        {businessMessages.length > 0 && (
+          <>
+            <h2 className={styles.sectionTitle}>Business xabarlar</h2>
+            <div className={styles.msgList}>
+              {businessMessages.map((m) => (
+                <BusinessMessageRow key={m.id} message={m} />
+              ))}
+            </div>
+          </>
+        )}
+
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>Botlar</h2>
           <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
