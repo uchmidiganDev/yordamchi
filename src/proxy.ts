@@ -6,6 +6,7 @@ const SESSION_COOKIE_NAME = "yordamchi_session";
 const PUBLIC_PATHS = [
   "/login",
   "/api/telegram/webhook",
+  "/api/telegram/bots",
   "/api/auth/telegram/start",
   "/api/auth/telegram/status",
 ];

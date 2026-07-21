@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "public_bot_enabled" boolean DEFAULT false NOT NULL;

@@ -11,6 +11,7 @@ import type { AnalysisView } from "@/lib/analysis";
 import { formatDateUz, formatTimeUz } from "@/lib/format-date";
 import { PageHeader } from "../page-header";
 import listStyles from "../list.module.css";
+import { AiChat } from "./ai-chat";
 import styles from "./ai.module.css";
 
 const KIND_LABEL: Record<AnalysisView["kind"], string> = {
@@ -126,6 +127,8 @@ export function AiClient({
       />
 
       <div className={styles.wrap}>
+        <AiChat />
+
         <Card padding="16px" className={styles.runCard}>
           <div className={styles.runRow}>
             <div>

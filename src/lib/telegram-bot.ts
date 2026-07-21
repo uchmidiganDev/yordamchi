@@ -7,6 +7,8 @@ import { parseGenericReceipt } from "./generic-receipt";
 import { saveReceiptExpense, saveGenericExpense } from "./expense-from-receipt";
 import type { ReceiptSaveResult } from "./expense-from-receipt";
 import { extractPdfText } from "./pdf-text";
+import { answerAssistantQuestion } from "./assistant";
+import { replyAsPublicAssistant } from "./public-reply";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
@@ -38,7 +40,7 @@ bot.command("start", async (ctx) => {
       allowedId: ALLOWED_TELEGRAM_ID,
     });
     await ctx.reply(
-      "Kechirasiz, bu ilova shaxsiy foydalanish uchun mo'ljallangan va sizga kirish huquqi berilmagan."
+      "Bu ilovaga kirish faqat egasiga tegishli. Lekin menga to'g'ridan-to'g'ri savol yozishingiz mumkin — yordam berishga harakat qilaman."
     );
     return;
   }
@@ -126,25 +128,20 @@ async function replySaveResult(ctx: Context, result: ReceiptSaveResult) {
 }
 
 // Matn chekini (Paynet formati) parse qilib, xarajat sifatida saqlaydi.
-// `silentIfNotReceipt` — chek bo'lmasa jim turish (oddiy matn xabarlar uchun).
+// Chek topilmasa `false` qaytaradi — chaqiruvchi xabarni AI Assistant'ga
+// yuboradi.
 async function handleReceiptText(
   ctx: Context,
   text: string,
-  fromId: number,
-  silentIfNotReceipt: boolean
-) {
+  fromId: number
+): Promise<boolean> {
   const receipt = parsePaynetReceipt(text);
-  if (!receipt) {
-    if (!silentIfNotReceipt) {
-      await ctx.reply("Bu matnda chek topilmadi.");
-    }
-    return;
-  }
+  if (!receipt) return false;
 
   const user = await getOwnerUser(fromId);
   if (!user) {
     await ctx.reply("Avval ilovaga kiring, keyin cheklarni yuboring.");
-    return;
+    return true;
   }
 
   try {
@@ -154,18 +151,50 @@ async function handleReceiptText(
     console.error("[telegram-bot] chekni saqlashda xato", error);
     await ctx.reply("Chekni saqlashda xatolik yuz berdi. Keyinroq urinib ko'ring.");
   }
+  return true;
 }
 
-// Botга forward qilingan Paynet chekini (matn) o'qib, avtomatik xarajat sifatida
-// saqlaydi. Faqat loyiha egasining xabarlari qabul qilinadi.
+// Chek bo'lmagan xabarlarni AI Assistant'ga yuboradi — javob Bilim bazasi va
+// System Prompt asosida shakllanadi (src/lib/assistant.ts).
+async function handleAssistantMessage(ctx: Context, text: string, fromId: number) {
+  const user = await getOwnerUser(fromId);
+  if (!user) {
+    await ctx.reply("Avval ilovaga kiring, keyin savol bering.");
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction("typing");
+    const answer = await answerAssistantQuestion(user.id, text);
+    await ctx.reply(answer);
+  } catch (error) {
+    console.error("[telegram-bot] AI Assistant xatosi", error);
+    await ctx.reply("Javob berishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+  }
+}
+
+// Botga yozilgan matn xabarlarni qayta ishlaydi. Loyiha egasi uchun: avval
+// Paynet cheki sifatida sinaydi (forward qilingan chek bo'lsa xarajat
+// sifatida saqlanadi), bo'lmasa AI Assistant'ga savol sifatida yuboradi.
+// Begona foydalanuvchilar uchun: chek tekshiruvi o'tkazib yuboriladi (shaxsiy
+// xarajat funksiyasi), to'g'ridan-to'g'ri Ommaviy bot bilan bir xil AI
+// Assistant javobiga yo'naltiriladi (publicBotEnabled yoqilgan bo'lsagina).
 bot.on("message:text", async (ctx) => {
   const fromId = ctx.from?.id;
-  if (!fromId || fromId.toString() !== ALLOWED_TELEGRAM_ID) return;
+  if (!fromId) return;
 
   const text = ctx.message.text;
   if (text.startsWith("/")) return; // komandalar alohida ishlanadi
 
-  await handleReceiptText(ctx, text, fromId, true);
+  if (fromId.toString() !== ALLOWED_TELEGRAM_ID) {
+    await replyAsPublicAssistant(ctx, text);
+    return;
+  }
+
+  const wasReceipt = await handleReceiptText(ctx, text, fromId);
+  if (!wasReceipt) {
+    await handleAssistantMessage(ctx, text, fromId);
+  }
 });
 
 // PDF yuborilganda: faylni yuklab olib, matnini ajratadi. Avval Paynet cheki

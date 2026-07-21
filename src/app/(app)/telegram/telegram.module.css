@@ -1,0 +1,136 @@
+.wrap {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-body);
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--leading-body);
+}
+
+.botList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.botActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-body);
+}
+
+.switch {
+  flex: none;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.switchOn {
+  background: var(--color-primary);
+}
+
+.switchThumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  transition: transform 0.15s ease;
+}
+
+.switchOn .switchThumb {
+  transform: translateX(18px);
+}
+
+.sheetFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.msgList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msgHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.msgFrom {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+.msgMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.msgText {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.msgAnswer {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--purple-100);
+  color: var(--text-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}

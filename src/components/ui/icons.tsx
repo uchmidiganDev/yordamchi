@@ -90,6 +90,23 @@ export function SettingsIcon(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function BookIcon(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20" />
+    </svg>
+  );
+}
+
+export function TelegramIcon(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>
+      <path d="M21 4 3 11.5l6 2M21 4 15.5 20l-6.5-6.5M21 4 9 13.5v5" />
+    </svg>
+  );
+}
+
 export function LogoutIcon(p: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" {...stroke} {...p}>

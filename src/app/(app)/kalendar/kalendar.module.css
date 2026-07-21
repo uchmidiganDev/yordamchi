@@ -228,6 +228,13 @@
   background: var(--pending);
 }
 
+.sheetFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 /* --- Bo'sh holat --- */
 
 .empty {

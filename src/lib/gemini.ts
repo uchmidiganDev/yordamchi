@@ -71,3 +71,49 @@ export async function generateJson<T>(opts: {
     throw new Error("Gemini javobini JSON sifatida o'qib bo'lmadi");
   }
 }
+
+// Oddiy matn javob (JSON schema'siz) — suhbat/chat uslubidagi javoblar uchun.
+export async function generateText(opts: {
+  system?: string;
+  prompt: string;
+  temperature?: number;
+}): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
+  }
+  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      ...(opts.system
+        ? { systemInstruction: { parts: [{ text: opts.system }] } }
+        : {}),
+      contents: [{ role: "user", parts: [{ text: opts.prompt }] }],
+      generationConfig: {
+        temperature: opts.temperature ?? 0.5,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `Gemini so'rovi muvaffaqiyatsiz (${res.status}): ${body.slice(0, 300)}`
+    );
+  }
+
+  const data = (await res.json()) as GeminiResponse;
+  const text =
+    data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ??
+    "";
+  if (!text) {
+    throw new Error("Gemini bo'sh javob qaytardi");
+  }
+  return text.trim();
+}

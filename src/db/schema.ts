@@ -7,6 +7,7 @@ import {
   time,
   date,
   integer,
+  boolean,
   pgEnum,
   unique,
 } from "drizzle-orm/pg-core";
@@ -52,6 +53,9 @@ export const users = pgTable("users", {
   timezone: text("timezone").notNull().default("Asia/Tashkent"),
   morningTime: time("morning_time").notNull().default("08:00"),
   eveningTime: time("evening_time").notNull().default("21:00"),
+  // AI Assistant uchun moslashtirilgan system prompt. Bo'sh bo'lsa
+  // ilovadagi standart prompt ishlatiladi (src/lib/actions/assistant.ts).
+  assistantSystemPrompt: text("assistant_system_prompt"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -142,6 +146,61 @@ export const analyses = pgTable("analyses", {
     .defaultNow(),
 });
 
+// AI Assistant uchun bilim bazasi yozuvlari — admin panel orqali
+// kiritiladi va Telegram bot javoblarida birinchi manba sifatida ishlatiladi.
+export const knowledgeEntries = pgTable("knowledge_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Foydalanuvchi UI orqali qo'shgan qo'shimcha AI botlari (masalan
+// @yusuf_chatbot_bot). Har biri /telegram sahifasida boshqariladi
+// (yoqish/o'chirish, o'chirish). helperizim_bot (shaxsiy bot) bu jadvalga
+// kirmaydi — u src/lib/telegram-bot.ts'da alohida boshqariladi.
+export const telegramBots = pgTable("telegram_bots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull(),
+  username: text("username").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Botlarga kelgan xabarlar va berilgan javoblar jurnali. `chatId` bo'yicha
+// guruhlab, oldingi bir nechta xabar suhbat konteksti sifatida keyingi AI
+// chaqiruviga uzatiladi (src/lib/assistant.ts).
+export const telegramMessages = pgTable("telegram_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  botId: uuid("bot_id")
+    .notNull()
+    .references(() => telegramBots.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  fromName: text("from_name"),
+  fromUsername: text("from_username"),
+  text: text("text").notNull(),
+  answer: text("answer"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const cards = pgTable("cards", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -190,3 +249,9 @@ export type Card = typeof cards.$inferSelect;
 export type NewCard = typeof cards.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
+export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
+export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;
+export type TelegramBot = typeof telegramBots.$inferSelect;
+export type NewTelegramBot = typeof telegramBots.$inferInsert;
+export type TelegramMessage = typeof telegramMessages.$inferSelect;
+export type NewTelegramMessage = typeof telegramMessages.$inferInsert;

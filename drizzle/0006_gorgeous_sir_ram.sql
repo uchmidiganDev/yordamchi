@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "assistant_system_prompt" text;

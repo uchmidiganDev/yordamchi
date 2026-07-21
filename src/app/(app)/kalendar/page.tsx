@@ -17,6 +17,7 @@ import {
   weekdayIndex,
 } from "@/lib/tz";
 import { PageHeader } from "../page-header";
+import { KalendarAddButton } from "./kalendar-add-button";
 import styles from "./kalendar.module.css";
 
 const WEEKDAYS_UZ = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
@@ -249,6 +250,8 @@ export default async function KalendarPage({
           </span>
         </div>
       </div>
+
+      <KalendarAddButton dateStr={dateStr} />
     </div>
   );
 }

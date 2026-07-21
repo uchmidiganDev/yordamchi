@@ -136,14 +136,14 @@
 
   <div class="overview">
     <div class="stat"><div class="num">4</div><div class="label">Jami sprint</div></div>
-    <div class="stat"><div class="num" style="color:var(--green)">2</div><div class="label">Bajarilgan</div></div>
-    <div class="stat"><div class="num" style="color:var(--yellow)">1</div><div class="label">Jarayonda</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">3</div><div class="label">Bajarilgan</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">0</div><div class="label">Jarayonda</div></div>
     <div class="stat"><div class="num" style="color:var(--gray)">1</div><div class="label">Rejalashtirilgan</div></div>
   </div>
 
   <div class="progress-wrap">
-    <div class="progress-label"><span>Umumiy progress</span><span>68%</span></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+    <div class="progress-label"><span>Umumiy progress</span><span>75%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
   </div>
 
   <div class="sprints">
@@ -193,17 +193,20 @@
           <div class="sprint-num">3</div>
           <h2>Asosiy Funksiyalar, AI va Kalendar</h2>
         </div>
-        <span class="badge progress">Jarayonda</span>
+        <span class="badge done">Bajarilgan</span>
       </div>
-      <p class="sprint-desc">Google Gemini AI yadrosi (kunlik tahlil, ertangi reja, progress, maqsadni bo'lish) va Google Calendar ikki tomonlama sinxronizatsiya. `GEMINI_API_KEY` kiritildi va 2026-07-20'da `scripts/smoke-sprint3.ts` orqali jonli sinov o'tkazildi: Gemini ulanishi va A–E tahlil (xulosa, ertangi reja, ogohlantirish, progress, motivatsiya) haqiqiy DB ma'lumotlari bilan to'g'ri ishladi. Google Calendar hali ulanmagan (`users.googleRefreshToken` bo'sh) — shu sabab kalendar sinxroni, F (maqsadni bo'lish) va tahlil tarixiga saqlash hali jonli sinalmagan.</p>
+      <p class="sprint-desc">Google Gemini AI yadrosi (kunlik tahlil, ertangi reja, progress, maqsadni bo'lish) va Google Calendar ikki tomonlama sinxronizatsiya. 2026-07-21'da Google Calendar OAuth muvaffaqiyatli ulandi (Google Cloud OAuth consent screen "Testing" rejimida bo'lgani sabab `tommysamiyyusuf@gmail.com` test user sifatida qo'shildi) va Tayyorlik mezonidagi barcha 8/8 band (A–F tahlil funksiyalari, tahlil tarixiga saqlash, Google Calendar yozish/o'qish) brauzerda jonli sinovdan muvaffaqiyatli o'tdi. Sprint 3 to'liq yakunlandi. Rejadan tashqari qo'shimcha ish (2026-07-21): AI Assistant — Bilim bazasi (`/bilim-baza`, CRUD) + moslashtiriladigan System Prompt + Telegram bot orqali erkin savol-javob (Paynet chek bo'lmagan matnlar endi Gemini AI Assistant'ga yuboriladi); Kalendar sahifasiga tezkor vazifa qo'shish tugmasi.</p>
       <div class="tags">
-        <span class="tag">Gemini API (A–E jonli sinovdan o'tdi)</span>
-        <span class="tag">Google Calendar sinxron (fetch, ulanish kutilmoqda)</span>
+        <span class="tag">Gemini API (A–F jonli sinovdan o'tdi)</span>
+        <span class="tag">Google Calendar sinxron (ulangan, jonli sinovdan o'tdi)</span>
         <span class="tag">Talab bo'yicha tahlil</span>
         <span class="tag">Band vaqtlar</span>
         <span class="tag">smoke-test skripti</span>
+        <span class="tag">AI Assistant + Bilim bazasi</span>
+        <span class="tag">Telegram savol-javob</span>
+        <span class="tag">Kalendar tezkor qo'shish</span>
       </div>
-      <div class="deliverable"><strong>Natija:</strong> Tugma bosilganda Gemini to'liq tahlil beradi; vazifalar Google Calendar bilan sinxronlanadi va band vaqtlar rejaga ta'sir qiladi. (Gemini A–E jonli sinovdan o'tdi; Google Calendar ulanib, F va kalendar sinxroni sinalgach DoD to'liq yopiladi.)</div>
+      <div class="deliverable"><strong>Natija:</strong> Tugma bosilganda Gemini to'liq tahlil beradi va saqlanadi; katta maqsad AI orqali kichik vazifalarga bo'linadi; vazifalar Google Calendar bilan sinxronlanadi va band vaqtlar rejaga ta'sir qiladi — barchasi jonli sinovdan o'tdi. Qo'shimcha: Telegram orqali Bilim bazasiga tayangan AI Assistant suhbati va kalendardan tezkor vazifa qo'shish.</div>
     </div>
 
     <div class="sprint">

@@ -159,6 +159,7 @@ export async function createTask(input: TaskInput) {
 
   revalidatePath("/tasks");
   revalidatePath("/");
+  revalidatePath("/kalendar");
 }
 
 export async function updateTask(id: string, input: Partial<TaskInput>) {
@@ -196,6 +197,7 @@ export async function updateTask(id: string, input: Partial<TaskInput>) {
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/kalendar");
 }
 
 export async function toggleTaskStatus(id: string, done: boolean) {
@@ -206,6 +208,7 @@ export async function toggleTaskStatus(id: string, done: boolean) {
     .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
 
   revalidatePath("/tasks");
+  revalidatePath("/kalendar");
 }
 
 // Takrorlanuvchi vazifaning ma'lum bir kundagi holatini belgilaydi. `done`
@@ -248,6 +251,7 @@ export async function toggleOccurrence(
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/kalendar");
 }
 
 export async function deleteTask(id: string) {
@@ -266,4 +270,5 @@ export async function deleteTask(id: string) {
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/kalendar");
 }
