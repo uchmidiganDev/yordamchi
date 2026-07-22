@@ -71,6 +71,13 @@
       "when": 1784652337813,
       "tag": "0009_complete_hawkeye",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784656578237,
+      "tag": "0010_talented_shaman",
+      "breakpoints": true
     }
   ]
 }

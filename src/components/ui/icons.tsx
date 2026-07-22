@@ -107,6 +107,15 @@ export function TelegramIcon(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function PhoneIcon(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>
+      <rect x="7" y="2.5" width="10" height="19" rx="2" />
+      <path d="M11 18.5h2" />
+    </svg>
+  );
+}
+
 export function LogoutIcon(p: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" {...stroke} {...p}>

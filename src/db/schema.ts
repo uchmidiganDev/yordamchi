@@ -63,6 +63,11 @@ export const users = pgTable("users", {
   businessConnectionEnabled: boolean("business_connection_enabled")
     .notNull()
     .default(false),
+  // Telefon bo'limi: qo'ng'iroqqa javob berayotgan AI shaxs (persona) va
+  // AI javob berish holati (Start/Stop). Telefoniya ulanmagunicha
+  // funksional emas, lekin persona boshqaruvi mustaqil ishlaydi.
+  activePersonaId: uuid("active_persona_id"),
+  phoneAiEnabled: boolean("phone_ai_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -162,6 +167,24 @@ export const knowledgeEntries = pgTable("knowledge_entries", {
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Telefon bo'limidagi AI shaxslar (personas) — har biri o'z nomi va System
+// Prompt'iga ega, telefon qo'ng'irog'ida qaysi biri javob berishini
+// `users.activePersonaId` belgilaydi.
+export const aiPersonas = pgTable("ai_personas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  systemPrompt: text("system_prompt").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -278,6 +301,8 @@ export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
 export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;
+export type AiPersona = typeof aiPersonas.$inferSelect;
+export type NewAiPersona = typeof aiPersonas.$inferInsert;
 export type TelegramBot = typeof telegramBots.$inferSelect;
 export type NewTelegramBot = typeof telegramBots.$inferInsert;
 export type TelegramMessage = typeof telegramMessages.$inferSelect;
