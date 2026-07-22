@@ -217,6 +217,86 @@ export const codeReviews = pgTable("code_reviews", {
     .defaultNow(),
 });
 
+// Guruh (Telegram group/supergroup) bo'yicha anti-spam sozlamasi. Yozuv
+// birinchi xabar kelganda "lazy" yaratiladi (bot guruhga qo'shilgan payt
+// alohida event kutilmaydi) — shu sabab userId majburiy emas, chunki qaysi
+// ilova egasi tegishli ekanini bilish shart emas (single-tenant, faqat bitta
+// egasi bor).
+export const groupSettings = pgTable("group_settings", {
+  chatId: bigint("chat_id", { mode: "bigint" }).primaryKey(),
+  antispamEnabled: boolean("antispam_enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Guruhda foydalanuvchi bo'yicha ogohlantirish soni — belgilangan chegaraga
+// yetsa mute/banga eskalatsiya qilinadi (src/lib/group-moderation.ts).
+export const groupWarnings = pgTable(
+  "group_warnings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+    telegramUserId: bigint("telegram_user_id", { mode: "bigint" }).notNull(),
+    count: integer("count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique().on(t.chatId, t.telegramUserId)]
+);
+
+// Flood/takroriy xabar aniqlash uchun guruhdagi so'nggi xabarlar jurnali —
+// vaqt oynasi bo'yicha so'rovga tutiladi (src/lib/group-moderation.ts).
+// Eslatma: eski yozuvlar avtomatik tozalanmaydi (MVP) — juda faol guruhda
+// jadval o'sib boradi, kelajakda davriy tozalash qo'shilishi mumkin.
+export const groupRecentMessages = pgTable("group_recent_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  telegramUserId: bigint("telegram_user_id", { mode: "bigint" }).notNull(),
+  textHash: text("text_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Moderatsiya harakatlari jurnali — Statistika/`/logs` (Stage 2) uchun
+// ma'lumot shu yerdan olinadi. Harakat Stage 1'da yozib boriladi, ko'rish
+// interfeysi (admin panel, `/logs`) Stage 2'da qo'shiladi.
+export const groupModerationLog = pgTable("group_moderation_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  telegramUserId: bigint("telegram_user_id", { mode: "bigint" }),
+  telegramUsername: text("telegram_username"),
+  action: text("action").notNull(), // deleted | warned | muted | banned
+  reason: text("reason").notNull(),
+  messageText: text("message_text"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Guruhda AI Assistant (mention/reply/`/ai`) suhbat tarixi — "AI Memory"
+// talabi shu jadval orqali amalga oshiriladi (businessMessages'ga o'xshash,
+// lekin guruh konteksti uchun).
+export const groupMessages = pgTable("group_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  fromName: text("from_name"),
+  fromUsername: text("from_username"),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Telefon bo'limidagi AI shaxslar (personas) — har biri o'z nomi va System
 // Prompt'iga ega, telefon qo'ng'irog'ida qaysi biri javob berishini
 // `users.activePersonaId` belgilaydi.

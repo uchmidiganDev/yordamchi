@@ -92,6 +92,13 @@
       "when": 1784717226547,
       "tag": "0012_careless_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784718927804,
+      "tag": "0013_luxuriant_arachne",
+      "breakpoints": true
     }
   ]
 }

@@ -29,6 +29,24 @@ import {
   saveCodeReview,
   type CodeCommand,
 } from "./code-assistant";
+import {
+  analyzeGroupMessage,
+  banUser,
+  enforceViolation,
+  isAntispamEnabled,
+  isGroupAdmin,
+  kickUser,
+  logModerationAction,
+  muteUser,
+  resetWarnings,
+  runDeterministicChecks,
+  setAntispamEnabled,
+  unbanUser,
+  unmuteUser,
+  warnUser,
+  WARN_MUTE_THRESHOLD,
+} from "./group-moderation";
+import { answerInGroup, extractMentionQuestion } from "./group-assistant";
 
 const BUSINESS_HISTORY_LIMIT = 6;
 
@@ -136,6 +154,124 @@ async function getOwnerUser(fromId: number) {
     .limit(1);
   return user ?? null;
 }
+
+// Guruh moderatsiya buyruqlari (/mute, /ban va h.k.) FAQAT guruhda va FAQAT
+// guruh administratori (yoki egasi) tomonidan chaqirilishi mumkin.
+async function requireGroupAdmin(ctx: Context): Promise<boolean> {
+  if (ctx.chat?.type === "private") return false;
+  if (!(await isGroupAdmin(ctx))) {
+    await ctx.reply("Bu buyruq faqat guruh administratorlari uchun.");
+    return false;
+  }
+  return true;
+}
+
+// Moderatsiya buyruqlari maqsad foydalanuvchini REPLY orqali aniqlaydi —
+// standart Telegram moderatsiya bot konvensiyasi.
+function getReplyTarget(ctx: Context): { id: number; username: string | null } | null {
+  const target = ctx.message?.reply_to_message?.from;
+  if (!target || target.is_bot) return null;
+  return { id: target.id, username: target.username ?? null };
+}
+
+bot.command(["ai", "ask", "chat"], async (ctx) => {
+  if (ctx.chat.type === "private") return; // DM'da oddiy matn allaqachon AI Assistant'ga boradi
+  const question = ctx.match?.toString().trim();
+  if (!question) {
+    await ctx.reply("Savolingizni yozing, masalan: /ai React nima?");
+    return;
+  }
+  const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+  if (!owner) return;
+  await answerInGroup(ctx, owner.id, question);
+});
+
+bot.command("antispam", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const arg = ctx.match?.toString().trim().toLowerCase();
+  if (arg !== "on" && arg !== "off") {
+    await ctx.reply("Foydalanish: /antispam on yoki /antispam off");
+    return;
+  }
+  await setAntispamEnabled(ctx.chat!.id, arg === "on");
+  await ctx.reply(`Anti-spam ${arg === "on" ? "yoqildi ✅" : "o'chirildi ❌"}`);
+});
+
+bot.command("mute", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const target = getReplyTarget(ctx);
+  if (!target) {
+    await ctx.reply("Foydalanuvchini mute qilish uchun uning xabariga reply qilib /mute yozing.");
+    return;
+  }
+  await muteUser(ctx, ctx.chat!.id, target.id);
+  await logModerationAction(ctx.chat!.id, target.id, target.username, "muted", "Admin buyrug'i", null);
+  await ctx.reply("✅ Foydalanuvchi mute qilindi (1 soat).");
+});
+
+bot.command("unmute", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const target = getReplyTarget(ctx);
+  if (!target) {
+    await ctx.reply("Foydalanuvchini unmute qilish uchun uning xabariga reply qilib /unmute yozing.");
+    return;
+  }
+  await unmuteUser(ctx, ctx.chat!.id, target.id);
+  await resetWarnings(ctx.chat!.id, target.id);
+  await ctx.reply("✅ Foydalanuvchi unmute qilindi.");
+});
+
+bot.command("ban", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const target = getReplyTarget(ctx);
+  if (!target) {
+    await ctx.reply("Foydalanuvchini ban qilish uchun uning xabariga reply qilib /ban yozing.");
+    return;
+  }
+  await banUser(ctx, ctx.chat!.id, target.id);
+  await logModerationAction(ctx.chat!.id, target.id, target.username, "banned", "Admin buyrug'i", null);
+  await ctx.reply("✅ Foydalanuvchi ban qilindi.");
+});
+
+bot.command("unban", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const target = getReplyTarget(ctx);
+  if (!target) {
+    await ctx.reply("Foydalanuvchini unban qilish uchun uning xabariga reply qilib /unban yozing.");
+    return;
+  }
+  await unbanUser(ctx, ctx.chat!.id, target.id);
+  await ctx.reply("✅ Foydalanuvchi unban qilindi.");
+});
+
+bot.command("kick", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const target = getReplyTarget(ctx);
+  if (!target) {
+    await ctx.reply("Foydalanuvchini kick qilish uchun uning xabariga reply qilib /kick yozing.");
+    return;
+  }
+  await kickUser(ctx, ctx.chat!.id, target.id);
+  await ctx.reply("✅ Foydalanuvchi guruhdan chiqarildi.");
+});
+
+bot.command("warn", async (ctx) => {
+  if (!(await requireGroupAdmin(ctx))) return;
+  const target = getReplyTarget(ctx);
+  if (!target) {
+    await ctx.reply("Foydalanuvchini ogohlantirish uchun uning xabariga reply qilib /warn yozing.");
+    return;
+  }
+  const count = await warnUser(ctx.chat!.id, target.id);
+  await logModerationAction(ctx.chat!.id, target.id, target.username, "warned", "Admin buyrug'i", null);
+  await ctx.reply(`⚠️ Ogohlantirish berildi (${count}/${WARN_MUTE_THRESHOLD}).`);
+  if (count >= WARN_MUTE_THRESHOLD) {
+    await muteUser(ctx, ctx.chat!.id, target.id);
+    await resetWarnings(ctx.chat!.id, target.id);
+    await logModerationAction(ctx.chat!.id, target.id, target.username, "muted", "Ogohlantirish chegarasi", null);
+    await ctx.reply("🔇 Ogohlantirish chegarasiga yetdi — foydalanuvchi mute qilindi.");
+  }
+});
 
 // Saqlash natijasini foydalanuvchiga javob sifatida yuboradi.
 async function replySaveResult(ctx: Context, result: ReceiptSaveResult) {
@@ -398,10 +534,82 @@ async function handleCodeCommand(ctx: Context, command: CodeCommand) {
 // Begona foydalanuvchilar uchun: chek tekshiruvi o'tkazib yuboriladi (shaxsiy
 // xarajat funksiyasi), to'g'ridan-to'g'ri Ommaviy bot bilan bir xil AI
 // Assistant javobiga yo'naltiriladi (publicBotEnabled yoqilgan bo'lsagina).
+// AI Group Moderation: guruh (group/supergroup) xabarlari BUTUNLAY alohida
+// yo'lga (handleGroupMessage) yo'naltiriladi — chek/website/kod-assistant/AI
+// Assistant DM oqimlari faqat shaxsiy chatda ma'noli, guruh spamida tasodifan
+// ishga tushib ketmasligi uchun bu yerda to'xtatiladi.
+async function handleGroupMessage(ctx: Context) {
+  const chatId = ctx.chat?.id;
+  const fromId = ctx.from?.id;
+  const text = ctx.message?.text;
+  if (!chatId || !fromId || !text || ctx.from?.is_bot) return;
+
+  if (await isAntispamEnabled(chatId)) {
+    const username = ctx.from?.username ?? null;
+    const isForwarded = Boolean(
+      (ctx.message as unknown as { forward_origin?: unknown })?.forward_origin
+    );
+    const checks = await runDeterministicChecks(chatId, fromId, text, isForwarded);
+
+    const violation =
+      (checks.isFlood && "Flood (bir xil foydalanuvchidan juda ko'p xabar)") ||
+      (checks.isDuplicate && "Takroriy xabar") ||
+      (checks.isCapsSpam && "Caps Lock spam") ||
+      (checks.isEmojiSpam && "Emoji spam") ||
+      ((checks.isUsernameAd || checks.isBotAd) && "Username/bot/forward reklamasi") ||
+      null;
+
+    if (violation) {
+      await enforceViolation(ctx, chatId, fromId, username, violation, text, false);
+      return;
+    }
+
+    // Juda qisqa xabarlar uchun AI chaqiruvini tejaymiz (masalan "ha", "ok").
+    if (text.trim().length >= 8) {
+      try {
+        const ai = await analyzeGroupMessage(text, checks.links);
+        if (ai.riskLevel === "high") {
+          await enforceViolation(
+            ctx,
+            chatId,
+            fromId,
+            username,
+            `${ai.reason} (${ai.categories.join(", ") || "yuqori xavf"})`,
+            text,
+            true
+          );
+          return;
+        }
+        if (ai.isAd || ai.isProfanity || ai.riskLevel === "medium") {
+          await enforceViolation(ctx, chatId, fromId, username, ai.reason, text, false);
+          return;
+        }
+      } catch (error) {
+        // AI xatoga uchrasa (masalan kvota) xabarni bloklamaymiz — soxta
+        // pozitivlarni oldini olish uchun "fail-open" yondashuv.
+        console.error("[telegram-bot] guruh AI moderatsiyasida xato", error);
+      }
+    }
+  }
+
+  const question = extractMentionQuestion(ctx);
+  if (question) {
+    const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+    if (owner) await answerInGroup(ctx, owner.id, question);
+  }
+}
+
 // AI Website Analyzer (URL yuborish / "To'g'rila") va AI Coding Assistant
 // (kod yuborish / "Fix"/"Explain"/"Optimize" va h.k.) kimdan kelishidan
 // qat'i nazar ishlaydi — chek va shaxsiy AI Assistant tekshiruvidan OLDIN.
+// Bularning barchasi FAQAT shaxsiy chatda (private) ishlaydi — guruh
+// xabarlari yuqoridagi handleGroupMessage'ga yo'naltiriladi.
 bot.on("message:text", async (ctx) => {
+  if (ctx.chat.type !== "private") {
+    await handleGroupMessage(ctx);
+    return;
+  }
+
   const fromId = ctx.from?.id;
   if (!fromId) return;
 
