@@ -7,8 +7,10 @@ import { parseGenericReceipt } from "./generic-receipt";
 import { saveReceiptExpense, saveGenericExpense } from "./expense-from-receipt";
 import type { ReceiptSaveResult } from "./expense-from-receipt";
 import { extractPdfText } from "./pdf-text";
+import { transcribeAudio } from "./gemini";
 import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
+import { sendVoiceReply } from "./voice-reply";
 
 const BUSINESS_HISTORY_LIMIT = 6;
 
@@ -157,8 +159,15 @@ async function handleReceiptText(
 }
 
 // Chek bo'lmagan xabarlarni AI Assistant'ga yuboradi — javob Bilim bazasi va
-// System Prompt asosida shakllanadi (src/lib/assistant.ts).
-async function handleAssistantMessage(ctx: Context, text: string, fromId: number) {
+// System Prompt asosida shakllanadi (src/lib/assistant.ts). `withVoice` —
+// ovozli xabardan kelgan savollar uchun javobning ovozli versiyasi ham
+// yuboriladi (oddiy matn savollar uchun false, matn bilan bir xil holat).
+async function handleAssistantMessage(
+  ctx: Context,
+  text: string,
+  fromId: number,
+  opts?: { withVoice?: boolean }
+) {
   const user = await getOwnerUser(fromId);
   if (!user) {
     await ctx.reply("Avval ilovaga kiring, keyin savol bering.");
@@ -169,6 +178,7 @@ async function handleAssistantMessage(ctx: Context, text: string, fromId: number
     await ctx.replyWithChatAction("typing");
     const answer = await answerAssistantQuestion(user.id, text);
     await ctx.reply(answer);
+    if (opts?.withVoice) await sendVoiceReply(ctx, answer);
   } catch (error) {
     console.error("[telegram-bot] AI Assistant xatosi", error);
     await ctx.reply("Javob berishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
@@ -197,6 +207,46 @@ bot.on("message:text", async (ctx) => {
   if (!wasReceipt) {
     await handleAssistantMessage(ctx, text, fromId);
   }
+});
+
+// Ovozli xabar (Voice Message): Gemini orqali matnga aylantiriladi
+// (o'zbek/rus/ingliz avtomatik aniqlanadi), so'ng xuddi matn xabar kabi AI
+// Assistant'ga yuboriladi — farqi shundaki, javob matn bilan birga ovozli
+// (TTS) shaklda ham qaytariladi. Chek tekshiruvi qo'llanilmaydi — ovozli
+// xabar orqali chek yuborish qo'llab-quvvatlanmaydi.
+bot.on("message:voice", async (ctx) => {
+  const fromId = ctx.from?.id;
+  if (!fromId) return;
+
+  let transcript: string;
+  try {
+    const file = await ctx.getFile();
+    if (!file.file_path) throw new Error("file_path yo'q");
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const res = await fetch(fileUrl);
+    if (!res.ok) throw new Error(`ovoz faylini yuklab bo'lmadi (${res.status})`);
+    const bytes = Buffer.from(await res.arrayBuffer());
+    transcript = await transcribeAudio(
+      bytes.toString("base64"),
+      ctx.message.voice.mime_type ?? "audio/ogg"
+    );
+  } catch (error) {
+    console.error("[telegram-bot] ovozni transkripsiya qilishda xato", error);
+    await ctx.reply("Kechirasiz, ovozni tushuna olmadim. Iltimos qayta yozib yuboring.");
+    return;
+  }
+
+  if (!transcript.trim()) {
+    await ctx.reply("Kechirasiz, ovozni tushuna olmadim. Iltimos qayta yozib yuboring.");
+    return;
+  }
+
+  if (fromId.toString() !== ALLOWED_TELEGRAM_ID) {
+    await replyAsPublicAssistant(ctx, transcript, { withVoice: true });
+    return;
+  }
+
+  await handleAssistantMessage(ctx, transcript, fromId, { withVoice: true });
 });
 
 // Telegram Business: foydalanuvchi botni shaxsiy akkauntiga "AI Assistant"

@@ -9,13 +9,18 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { telegramBots, users } from "@/db/schema";
 import { answerAssistantQuestion } from "./assistant";
+import { sendVoiceReply } from "./voice-reply";
 
 const OWNER_TELEGRAM_ID = process.env.ALLOWED_TELEGRAM_ID;
 if (!OWNER_TELEGRAM_ID) {
   throw new Error("ALLOWED_TELEGRAM_ID topilmadi (.env.local ni tekshiring)");
 }
 
-export async function replyAsPublicAssistant(ctx: Context, text: string) {
+export async function replyAsPublicAssistant(
+  ctx: Context,
+  text: string,
+  opts?: { withVoice?: boolean }
+) {
   const [owner] = await db
     .select({ id: users.id })
     .from(users)
@@ -43,6 +48,7 @@ export async function replyAsPublicAssistant(ctx: Context, text: string) {
     await ctx.replyWithChatAction("typing");
     const answer = await answerAssistantQuestion(owner.id, text, [], senderName);
     await ctx.reply(answer);
+    if (opts?.withVoice) await sendVoiceReply(ctx, answer);
   } catch (error) {
     console.error("[public-reply] AI Assistant xatosi", error);
     await ctx.reply("Javob berishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");

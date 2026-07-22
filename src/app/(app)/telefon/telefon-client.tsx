@@ -38,8 +38,9 @@ function StartStopCard({ initialEnabled }: { initialEnabled: boolean }) {
           <p className={styles.title}>Telefon AI</p>
           <p className={styles.hint}>
             Yoqilganda, javob bermagan qo&apos;ng&apos;iroqlaringizga faol
-            persona avtomatik javob beradi. Telefoniya (Twilio) hali
-            ulanmagan — ulangandan keyin bu switch ishga tushadi.
+            persona avtomatik javob beradi. Telefoniya (Telnyx) ulanish
+            jarayonida — hozircha faqat ulanish tekshiruvi ishlaydi, to&apos;liq
+            suhbat tez orada qo&apos;shiladi.
           </p>
         </div>
         <button
