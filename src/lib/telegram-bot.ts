@@ -20,6 +20,15 @@ import {
   isFixRequest,
   saveAnalysis,
 } from "./website-analyzer";
+import {
+  extractCode,
+  getCodeKnowledgeContext,
+  getLatestCodeReview,
+  matchCodeCommand,
+  runCodeAssistant,
+  saveCodeReview,
+  type CodeCommand,
+} from "./code-assistant";
 
 const BUSINESS_HISTORY_LIMIT = 6;
 
@@ -197,9 +206,15 @@ async function handleAssistantMessage(
 // Uzun matnni Telegram xabar hajmi chegarasidan (4096 belgi) oshib
 // ketmasligi uchun bir necha xabarga bo'lib yuboradi — paragraf chegaralari
 // bo'yicha, zarur bo'lsa qattiq bo'lish bilan.
-async function replyLong(ctx: Context, text: string, limit = 3500) {
+async function replyLong(
+  ctx: Context,
+  text: string,
+  opts?: { limit?: number; parseMode?: "HTML" }
+) {
+  const limit = opts?.limit ?? 3500;
+  const replyOpts = opts?.parseMode ? { parse_mode: opts.parseMode } : undefined;
   if (text.length <= limit) {
-    await ctx.reply(text);
+    await ctx.reply(text, replyOpts);
     return;
   }
   const parts: string[] = [];
@@ -222,7 +237,7 @@ async function replyLong(ctx: Context, text: string, limit = 3500) {
   }
   if (current) parts.push(current);
   for (const part of parts) {
-    await ctx.reply(part);
+    await ctx.reply(part, replyOpts);
   }
 }
 
@@ -272,14 +287,120 @@ async function handleWebsiteFixRequest(ctx: Context) {
   }
 }
 
+const CODE_FILE_EXTENSIONS: Record<string, string> = {
+  python: "py",
+  javascript: "js",
+  typescript: "ts",
+  react: "jsx",
+  "next.js": "tsx",
+  "node.js": "js",
+  html: "html",
+  css: "css",
+  tailwind: "html",
+  sql: "sql",
+  java: "java",
+  "c#": "cs",
+  "c++": "cpp",
+  go: "go",
+  rust: "rs",
+  markdown: "md",
+};
+
+function codeFileExtension(language: string): string {
+  return CODE_FILE_EXTENSIONS[language.trim().toLowerCase()] ?? "txt";
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// AI Coding Assistant javobini yuboradi: tahlil matni HTML parse_mode bilan
+// (Telegram Markdown emas — kod ichidagi `_`/`*` kabi belgilar "can't parse
+// entities" xatosiga sabab bo'lishi mumkin edi, website-analyzer'dagi kabi),
+// kod esa <pre><code> ichida (qisqa bo'lsa) yoki fayl sifatida (uzun bo'lsa).
+async function sendCodeAssistantReply(
+  ctx: Context,
+  result: { language: string; message: string; code: string }
+) {
+  await replyLong(ctx, escapeHtml(result.message), { parseMode: "HTML" });
+
+  const code = result.code.trim();
+  if (!code) return;
+
+  if (code.length > 3000) {
+    await ctx.replyWithDocument(
+      new InputFile(Buffer.from(code, "utf8"), `kod.${codeFileExtension(result.language)}`)
+    );
+  } else {
+    const lang = result.language.trim().toLowerCase().replace(/[^a-z0-9+#.]/g, "");
+    await ctx.reply(`<pre><code class="language-${lang}">${escapeHtml(code)}</code></pre>`, {
+      parse_mode: "HTML",
+    });
+  }
+}
+
+// Foydalanuvchi kod yuborganda (birinchi marta): Gemini orqali umumiy
+// tahlil (bug, xavfsizlik, performance, best practices) qilinadi va natija
+// shu chatga saqlanadi — keyingi Fix/Explain/Optimize buyruqlari shu kod
+// ustida ishlaydi.
+async function handleCodeReview(ctx: Context, code: string) {
+  const chatId = ctx.chat?.id;
+  if (!chatId) return;
+
+  try {
+    await ctx.replyWithChatAction("typing");
+    const knowledgeContext = await getCodeKnowledgeContext();
+    const result = await runCodeAssistant("review", code, knowledgeContext);
+    await sendCodeAssistantReply(ctx, result);
+    await saveCodeReview(chatId, result.language, code, result.message);
+  } catch (error) {
+    console.error("[telegram-bot] kod tahlilida xato", error);
+    await ctx.reply("Kodni tahlil qilishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+  }
+}
+
+// "Fix"/"Explain"/"Optimize"/"Test"/"README" va h.k. buyruqlarga javob: shu
+// suhbatdagi oxirgi kod ustida ishlaydi. Natija (kod bo'lsa yangilangan
+// kod, bo'lmasa avvalgi kod) yana saqlanadi — shu bilan Fix -> Optimize ->
+// Explain kabi zanjir ketma-ket oldingi natija ustida davom etadi.
+async function handleCodeCommand(ctx: Context, command: CodeCommand) {
+  const chatId = ctx.chat?.id;
+  if (!chatId) return;
+
+  const latest = await getLatestCodeReview(chatId);
+  if (!latest) {
+    await ctx.reply(
+      'Avval kod yuboring (yoki ```kod``` ko\'rinishida), keyin "Fix", "Explain" yoki "Optimize" deb yozing.'
+    );
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction("typing");
+    const knowledgeContext = await getCodeKnowledgeContext();
+    const result = await runCodeAssistant(command, latest.code, knowledgeContext);
+    await sendCodeAssistantReply(ctx, result);
+    await saveCodeReview(
+      chatId,
+      result.language || latest.language,
+      result.code.trim() || latest.code,
+      result.message
+    );
+  } catch (error) {
+    console.error("[telegram-bot] kod buyrug'ida xato", error);
+    await ctx.reply("So'rovni bajarishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+  }
+}
+
 // Botga yozilgan matn xabarlarni qayta ishlaydi. Loyiha egasi uchun: avval
 // Paynet cheki sifatida sinaydi (forward qilingan chek bo'lsa xarajat
 // sifatida saqlanadi), bo'lmasa AI Assistant'ga savol sifatida yuboradi.
 // Begona foydalanuvchilar uchun: chek tekshiruvi o'tkazib yuboriladi (shaxsiy
 // xarajat funksiyasi), to'g'ridan-to'g'ri Ommaviy bot bilan bir xil AI
 // Assistant javobiga yo'naltiriladi (publicBotEnabled yoqilgan bo'lsagina).
-// AI Website Analyzer (URL yuborish / "To'g'rila") kimdan kelishidan qat'i
-// nazar ishlaydi — chek va shaxsiy AI Assistant tekshiruvidan OLDIN.
+// AI Website Analyzer (URL yuborish / "To'g'rila") va AI Coding Assistant
+// (kod yuborish / "Fix"/"Explain"/"Optimize" va h.k.) kimdan kelishidan
+// qat'i nazar ishlaydi — chek va shaxsiy AI Assistant tekshiruvidan OLDIN.
 bot.on("message:text", async (ctx) => {
   const fromId = ctx.from?.id;
   if (!fromId) return;
@@ -295,6 +416,18 @@ bot.on("message:text", async (ctx) => {
   const analyzeUrl = extractSoleUrl(text);
   if (analyzeUrl) {
     await handleWebsiteAnalysis(ctx, analyzeUrl);
+    return;
+  }
+
+  const codeCommand = matchCodeCommand(text);
+  if (codeCommand) {
+    await handleCodeCommand(ctx, codeCommand);
+    return;
+  }
+
+  const code = extractCode(text);
+  if (code) {
+    await handleCodeReview(ctx, code);
     return;
   }
 

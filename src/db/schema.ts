@@ -56,6 +56,10 @@ export const users = pgTable("users", {
   // AI Assistant uchun moslashtirilgan system prompt. Bo'sh bo'lsa
   // ilovadagi standart prompt ishlatiladi (src/lib/actions/assistant.ts).
   assistantSystemPrompt: text("assistant_system_prompt"),
+  // AI Coding Assistant (Telegram) uchun moslashtirilgan qo'shimcha
+  // ko'rsatma. Bo'sh bo'lsa standart yo'riqnoma ishlatiladi
+  // (src/lib/code-assistant.ts).
+  codeAssistantSystemPrompt: text("code_assistant_system_prompt"),
   // Telegram Business ulanishi (shaxsiy akkauntga botni "AI Assistant"
   // sifatida ulash). Telegram'dan kelgan `business_connection` yangilanishi
   // orqali yoziladi (src/lib/telegram-bot.ts).
@@ -171,6 +175,44 @@ export const knowledgeEntries = pgTable("knowledge_entries", {
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// AI Coding Assistant uchun bilim bazasi (loyiha konvensiyalari, coding
+// standartlari va h.k.) — admin panel (/kod-yordamchi) orqali kiritiladi va
+// Telegram botdagi kod tahlili/fix/optimize javoblarida kontekst sifatida
+// ishlatiladi. Umumiy `knowledgeEntries`dan alohida — foydalanuvchi ataylab
+// alohida bo'lim so'radi.
+export const codeKnowledgeEntries = pgTable("code_knowledge_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Chat bo'yicha oxirgi kod tahlili/natija — "Fix"/"Explain"/"Optimize" va
+// boshqa buyruqlar shu yozuvdagi kodga nisbatan ishlaydi va har safar
+// natija bilan yangilanadi (zanjir davom etadi: Fix -> Optimize -> Explain
+// ketma-ketligi oldingi natija ustida ishlaydi).
+export const codeReviews = pgTable("code_reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  language: text("language").notNull(),
+  code: text("code").notNull(),
+  review: text("review").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

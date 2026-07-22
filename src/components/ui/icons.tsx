@@ -116,6 +116,15 @@ export function PhoneIcon(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function CodeIcon(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>
+      <polyline points="8 6 3 12 8 18" />
+      <polyline points="16 6 21 12 16 18" />
+    </svg>
+  );
+}
+
 export function LogoutIcon(p: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" {...stroke} {...p}>
