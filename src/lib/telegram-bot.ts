@@ -47,6 +47,7 @@ import {
   WARN_MUTE_THRESHOLD,
 } from "./group-moderation";
 import { answerInGroup, extractMentionQuestion } from "./group-assistant";
+import { detectVideoLink, downloadVideoFromLink } from "./video-downloader";
 
 const BUSINESS_HISTORY_LIMIT = 6;
 
@@ -747,15 +748,14 @@ bot.on("business_connection", async (ctx) => {
 // egasining telefonidan qo'lda yozgan javoblari HAM) — shuning uchun
 // egasining o'z xabarlarini e'tiborsiz qoldirish SHART, aks holda AI
 // egasining javobiga ham "javob" berishga urinadi.
+//
+// "/shaxsiy-ai" sahifasidagi sozlamalarga qarab (businessVoiceReplyEnabled/
+// businessLinkAnalysisEnabled/businessVideoDownloadEnabled) qo'shimcha uch
+// imkoniyat qo'llab-quvvatlanadi: ovozli xabar -> matn+ovoz javob, oddiy
+// link -> website tahlili, YouTube/Instagram link -> video yuklab berish.
 bot.on("business_message", async (ctx) => {
   const msg = ctx.businessMessage;
   if (!msg || msg.from?.id.toString() === ALLOWED_TELEGRAM_ID) return;
-
-  const text = msg.text;
-  if (!text) {
-    await ctx.reply("Hozircha faqat matnli xabarlarni qabul qila olaman.");
-    return;
-  }
 
   const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
   if (!owner) return;
@@ -765,8 +765,78 @@ bot.on("business_message", async (ctx) => {
     [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || null;
   const fromUsername = msg.from?.username ?? null;
 
+  let text = msg.text;
+  let isVoiceOrigin = false;
+
+  if (!text && msg.voice) {
+    if (!owner.businessVoiceReplyEnabled) {
+      await ctx.reply("Hozircha ovozli xabarlarni qabul qilmayapman.");
+      return;
+    }
+    try {
+      const file = await ctx.getFile();
+      if (!file.file_path) throw new Error("file_path yo'q");
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+      const res = await fetch(fileUrl);
+      if (!res.ok) throw new Error(`ovoz faylini yuklab bo'lmadi (${res.status})`);
+      const bytes = Buffer.from(await res.arrayBuffer());
+      text = await transcribeAudio(bytes.toString("base64"), msg.voice.mime_type ?? "audio/ogg");
+      isVoiceOrigin = true;
+    } catch (error) {
+      console.error("[telegram-bot] Business ovozni transkripsiya qilishda xato", error);
+      await ctx.reply("Kechirasiz, ovozni tushuna olmadim. Iltimos qayta yozib yuboring.");
+      return;
+    }
+    if (!text?.trim()) {
+      await ctx.reply("Kechirasiz, ovozni tushuna olmadim. Iltimos qayta yozib yuboring.");
+      return;
+    }
+  }
+
+  if (!text) {
+    await ctx.reply("Hozircha faqat matnli yoki ovozli xabarlarni qabul qila olaman.");
+    return;
+  }
+
+  if (owner.businessVideoDownloadEnabled) {
+    const videoKind = detectVideoLink(text);
+    if (videoKind) {
+      try {
+        await ctx.replyWithChatAction("upload_video");
+        const video = await downloadVideoFromLink(text, videoKind);
+        await ctx.replyWithVideo(new InputFile(video.buffer, video.filename));
+      } catch (error) {
+        console.error("[telegram-bot] Business video yuklab olishda xato", error);
+        const message = error instanceof Error ? error.message : "noma'lum xato";
+        await ctx.reply(`Videoni yuklab bo'lmadi: ${message}`);
+      }
+      return;
+    }
+  }
+
+  if (owner.businessLinkAnalysisEnabled) {
+    const analyzeUrl = extractSoleUrl(text);
+    if (analyzeUrl) {
+      try {
+        await ctx.replyWithChatAction("typing");
+        const { html, headers } = await fetchSiteHtml(analyzeUrl);
+        const analysis = await analyzeWebsite(analyzeUrl, html, headers);
+        await replyLong(ctx, analysis);
+        await saveAnalysis(chatId, analyzeUrl, html, analysis);
+      } catch (error) {
+        console.error("[telegram-bot] Business website tahlilida xato", error);
+        const message = error instanceof Error ? error.message : "noma'lum xato";
+        await ctx.reply(`Saytni tahlil qilib bo'lmadi: ${message}`);
+      }
+      return;
+    }
+  }
+
   async function logAndReply(answer: string) {
     await ctx.reply(answer);
+    if (isVoiceOrigin && owner!.businessVoiceReplyEnabled) {
+      await sendVoiceReply(ctx, answer);
+    }
     await db.insert(businessMessages).values({
       userId: owner!.id,
       chatId: BigInt(chatId),

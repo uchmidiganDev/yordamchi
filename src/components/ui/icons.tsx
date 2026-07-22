@@ -116,6 +116,16 @@ export function PhoneIcon(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function PersonalAiIcon(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" />
+      <path d="M18 4.5l.8 1.6 1.7.5-1.7.5-.8 1.6-.8-1.6-1.7-.5 1.7-.5z" />
+    </svg>
+  );
+}
+
 export function CodeIcon(p: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>

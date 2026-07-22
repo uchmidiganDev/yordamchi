@@ -67,11 +67,26 @@ export const users = pgTable("users", {
   businessConnectionEnabled: boolean("business_connection_enabled")
     .notNull()
     .default(false),
-  // Telefon bo'limi: qo'ng'iroqqa javob berayotgan AI shaxs (persona) va
-  // AI javob berish holati (Start/Stop). Telefoniya ulanmagunicha
-  // funksional emas, lekin persona boshqaruvi mustaqil ishlaydi.
+  // Telefon bo'limi (PSTN/Telnyx rejasi): qo'ng'iroqqa javob berayotgan AI
+  // shaxs (persona) va AI javob berish holati. 2026-07-22'da UI ("/telefon"
+  // sahifasi) olib tashlandi va o'rniga "/shaxsiy-ai" (Telegram Business
+  // orqali) qo'yildi — bu ustunlar/`aiPersonas` jadvali ATAYLAB o'chirilmadi,
+  // chunki `src/app/api/telnyx/webhook/route.ts` hali shu ma'lumotga
+  // (persona nomi) tayanadi (Telnyx dormant, lekin kod ishlaydi).
   activePersonaId: uuid("active_persona_id"),
   phoneAiEnabled: boolean("phone_ai_enabled").notNull().default(false),
+  // "/shaxsiy-ai" sahifasi: Telegram Business orqali shaxsiy akkauntga
+  // kelgan xabarlarda qaysi qo'shimcha imkoniyatlar faol ekanini boshqaradi
+  // (src/lib/telegram-bot.ts'dagi business_message handleri).
+  businessVoiceReplyEnabled: boolean("business_voice_reply_enabled")
+    .notNull()
+    .default(true),
+  businessLinkAnalysisEnabled: boolean("business_link_analysis_enabled")
+    .notNull()
+    .default(true),
+  businessVideoDownloadEnabled: boolean("business_video_download_enabled")
+    .notNull()
+    .default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -1,0 +1,87 @@
+.wrap {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-body);
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--leading-body);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.statusOn {
+  color: var(--status-done-fg);
+  background: var(--status-done-bg, var(--border-subtle));
+}
+
+.statusOn .statusDot {
+  background: var(--status-done-fg);
+}
+
+.switch {
+  flex: none;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.switchOn {
+  background: var(--color-primary);
+}
+
+.switchThumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  transition: transform 0.15s ease;
+}
+
+.switchOn .switchThumb {
+  transform: translateX(18px);
+}
