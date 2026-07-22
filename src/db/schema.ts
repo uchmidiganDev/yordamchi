@@ -251,6 +251,25 @@ export const businessMessages = pgTable("business_messages", {
     .defaultNow(),
 });
 
+// AI Website Analyzer: chat bo'yicha oxirgi tahlil natijasi saqlanadi — "To'g'rila"
+// so'ralganda shu yozuvdagi HTML+tahlil asosida yaxshilangan kod yaratiladi
+// (src/lib/website-analyzer.ts). `userId` — doim ilova egasi (single-tenant
+// naqsh, businessMessages/telegramMessages'dagi kabi), `chatId` — haqiqiy
+// Telegram suhbat, kim yozganidan qat'i nazar.
+export const websiteAnalyses = pgTable("website_analyses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  url: text("url").notNull(),
+  html: text("html").notNull(),
+  analysis: text("analysis").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const cards = pgTable("cards", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")

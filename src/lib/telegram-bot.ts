@@ -1,4 +1,4 @@
-import { Bot, Context } from "grammy";
+import { Bot, Context, InputFile } from "grammy";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens, businessMessages } from "@/db/schema";
@@ -11,6 +11,15 @@ import { transcribeAudio } from "./gemini";
 import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
 import { sendVoiceReply } from "./voice-reply";
+import {
+  analyzeWebsite,
+  extractSoleUrl,
+  fetchSiteHtml,
+  getLatestAnalysis,
+  improveWebsite,
+  isFixRequest,
+  saveAnalysis,
+} from "./website-analyzer";
 
 const BUSINESS_HISTORY_LIMIT = 6;
 
@@ -185,18 +194,109 @@ async function handleAssistantMessage(
   }
 }
 
+// Uzun matnni Telegram xabar hajmi chegarasidan (4096 belgi) oshib
+// ketmasligi uchun bir necha xabarga bo'lib yuboradi — paragraf chegaralari
+// bo'yicha, zarur bo'lsa qattiq bo'lish bilan.
+async function replyLong(ctx: Context, text: string, limit = 3500) {
+  if (text.length <= limit) {
+    await ctx.reply(text);
+    return;
+  }
+  const parts: string[] = [];
+  let current = "";
+  for (const paragraph of text.split("\n\n")) {
+    const candidate = current ? `${current}\n\n${paragraph}` : paragraph;
+    if (candidate.length > limit) {
+      if (current) parts.push(current);
+      if (paragraph.length > limit) {
+        for (let i = 0; i < paragraph.length; i += limit) {
+          parts.push(paragraph.slice(i, i + limit));
+        }
+        current = "";
+      } else {
+        current = paragraph;
+      }
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) parts.push(current);
+  for (const part of parts) {
+    await ctx.reply(part);
+  }
+}
+
+// AI Website Analyzer: URL yuborilganda saytni yuklab, Gemini orqali tahlil
+// qiladi va natijani shu suhbatga saqlaydi ("To'g'rila" uchun kerak bo'ladi).
+async function handleWebsiteAnalysis(ctx: Context, url: string) {
+  const chatId = ctx.chat?.id;
+  if (!chatId) return;
+
+  try {
+    await ctx.replyWithChatAction("typing");
+    const { html, headers } = await fetchSiteHtml(url);
+    const analysis = await analyzeWebsite(url, html, headers);
+    await replyLong(ctx, analysis);
+    await saveAnalysis(chatId, url, html, analysis);
+  } catch (error) {
+    console.error("[telegram-bot] website tahlilida xato", error);
+    const message = error instanceof Error ? error.message : "noma'lum xato";
+    await ctx.reply(`Saytni tahlil qilib bo'lmadi: ${message}`);
+  }
+}
+
+// "To'g'rila" so'roviga javob: shu suhbatdagi oxirgi tahlil asosida
+// yaxshilangan HTML/CSS fayl yaratib, hujjat sifatida yuboradi.
+async function handleWebsiteFixRequest(ctx: Context) {
+  const chatId = ctx.chat?.id;
+  if (!chatId) return;
+
+  const latest = await getLatestAnalysis(chatId);
+  if (!latest) {
+    await ctx.reply(
+      "Avval tahlil qilish uchun sayt havolasini yuboring, keyin \"To'g'rila\" deb yozing."
+    );
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction("upload_document");
+    const improved = await improveWebsite(latest.url, latest.html, latest.analysis);
+    await ctx.replyWithDocument(
+      new InputFile(Buffer.from(improved, "utf8"), "yaxshilangan.html"),
+      { caption: `${latest.url} uchun yaxshilangan HTML/CSS kodi` }
+    );
+  } catch (error) {
+    console.error("[telegram-bot] website tuzatishda xato", error);
+    await ctx.reply("Kodni yaratishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+  }
+}
+
 // Botga yozilgan matn xabarlarni qayta ishlaydi. Loyiha egasi uchun: avval
 // Paynet cheki sifatida sinaydi (forward qilingan chek bo'lsa xarajat
 // sifatida saqlanadi), bo'lmasa AI Assistant'ga savol sifatida yuboradi.
 // Begona foydalanuvchilar uchun: chek tekshiruvi o'tkazib yuboriladi (shaxsiy
 // xarajat funksiyasi), to'g'ridan-to'g'ri Ommaviy bot bilan bir xil AI
 // Assistant javobiga yo'naltiriladi (publicBotEnabled yoqilgan bo'lsagina).
+// AI Website Analyzer (URL yuborish / "To'g'rila") kimdan kelishidan qat'i
+// nazar ishlaydi — chek va shaxsiy AI Assistant tekshiruvidan OLDIN.
 bot.on("message:text", async (ctx) => {
   const fromId = ctx.from?.id;
   if (!fromId) return;
 
   const text = ctx.message.text;
   if (text.startsWith("/")) return; // komandalar alohida ishlanadi
+
+  if (isFixRequest(text)) {
+    await handleWebsiteFixRequest(ctx);
+    return;
+  }
+
+  const analyzeUrl = extractSoleUrl(text);
+  if (analyzeUrl) {
+    await handleWebsiteAnalysis(ctx, analyzeUrl);
+    return;
+  }
 
   if (fromId.toString() !== ALLOWED_TELEGRAM_ID) {
     await replyAsPublicAssistant(ctx, text);
