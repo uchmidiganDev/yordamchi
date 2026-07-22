@@ -306,54 +306,91 @@ export async function logModerationAction(
   });
 }
 
+// Quyidagi ijro funksiyalari (mute/unmute/ban/unban/kick) hammasi `boolean`
+// qaytaradi (throw qilmaydi) — botga admin huquqi berilmagan bo'lsa,
+// Telegram "not enough rights" xatosi qaytaradi; buni ushlab olib `false`
+// qaytarish orqali chaqiruvchi kod (enforceViolation, admin buyruqlari)
+// muloyimlik bilan davom eta oladi, webhook 500 bilan yiqilmaydi.
 export async function muteUser(
   ctx: Context,
   chatId: number,
   telegramUserId: number,
   durationSeconds = MUTE_DURATION_SECONDS
-): Promise<void> {
-  await ctx.api.restrictChatMember(
-    chatId,
-    telegramUserId,
-    { can_send_messages: false },
-    { until_date: Math.floor(Date.now() / 1000) + durationSeconds }
-  );
+): Promise<boolean> {
+  try {
+    await ctx.api.restrictChatMember(
+      chatId,
+      telegramUserId,
+      { can_send_messages: false },
+      { until_date: Math.floor(Date.now() / 1000) + durationSeconds }
+    );
+    return true;
+  } catch (error) {
+    console.error("[group-moderation] mute qilishda xato (ehtimol admin huquqi yo'q)", error);
+    return false;
+  }
 }
 
-export async function unmuteUser(ctx: Context, chatId: number, telegramUserId: number): Promise<void> {
-  await ctx.api.restrictChatMember(chatId, telegramUserId, {
-    can_send_messages: true,
-    can_send_audios: true,
-    can_send_documents: true,
-    can_send_photos: true,
-    can_send_videos: true,
-    can_send_video_notes: true,
-    can_send_voice_notes: true,
-    can_send_polls: true,
-    can_send_other_messages: true,
-    can_add_web_page_previews: true,
-  });
+export async function unmuteUser(ctx: Context, chatId: number, telegramUserId: number): Promise<boolean> {
+  try {
+    await ctx.api.restrictChatMember(chatId, telegramUserId, {
+      can_send_messages: true,
+      can_send_audios: true,
+      can_send_documents: true,
+      can_send_photos: true,
+      can_send_videos: true,
+      can_send_video_notes: true,
+      can_send_voice_notes: true,
+      can_send_polls: true,
+      can_send_other_messages: true,
+      can_add_web_page_previews: true,
+    });
+    return true;
+  } catch (error) {
+    console.error("[group-moderation] unmute qilishda xato (ehtimol admin huquqi yo'q)", error);
+    return false;
+  }
 }
 
-export async function banUser(ctx: Context, chatId: number, telegramUserId: number): Promise<void> {
-  await ctx.api.banChatMember(chatId, telegramUserId);
+export async function banUser(ctx: Context, chatId: number, telegramUserId: number): Promise<boolean> {
+  try {
+    await ctx.api.banChatMember(chatId, telegramUserId);
+    return true;
+  } catch (error) {
+    console.error("[group-moderation] ban qilishda xato (ehtimol admin huquqi yo'q)", error);
+    return false;
+  }
 }
 
-export async function unbanUser(ctx: Context, chatId: number, telegramUserId: number): Promise<void> {
-  await ctx.api.unbanChatMember(chatId, telegramUserId, { only_if_banned: true });
+export async function unbanUser(ctx: Context, chatId: number, telegramUserId: number): Promise<boolean> {
+  try {
+    await ctx.api.unbanChatMember(chatId, telegramUserId, { only_if_banned: true });
+    return true;
+  } catch (error) {
+    console.error("[group-moderation] unban qilishda xato (ehtimol admin huquqi yo'q)", error);
+    return false;
+  }
 }
 
 // Kick — Telegram'da alohida metod yo'q: ban + darhol unban (foydalanuvchi
 // guruhdan chiqariladi, lekin taklif havolasi orqali qayta qo'shilishi mumkin).
-export async function kickUser(ctx: Context, chatId: number, telegramUserId: number): Promise<void> {
-  await ctx.api.banChatMember(chatId, telegramUserId);
-  await ctx.api.unbanChatMember(chatId, telegramUserId, { only_if_banned: true });
+export async function kickUser(ctx: Context, chatId: number, telegramUserId: number): Promise<boolean> {
+  try {
+    await ctx.api.banChatMember(chatId, telegramUserId);
+    await ctx.api.unbanChatMember(chatId, telegramUserId, { only_if_banned: true });
+    return true;
+  } catch (error) {
+    console.error("[group-moderation] kick qilishda xato (ehtimol admin huquqi yo'q)", error);
+    return false;
+  }
 }
 
 // Xabar spam/toksik deb topilganda: o'chirish + ogohlantirish, ogohlantirish
 // chegarasiga yetganda mute'ga eskalatsiya qiladi. AI "high" xavf desa,
 // ogohlantirish sonidan qat'i nazar darhol mute qilinadi (talabga mos:
-// "High bo'lsa: Delete + Mute").
+// "High bo'lsa: Delete + Mute"). Bot admin bo'lmasa delete/mute jim
+// muvaffaqiyatsiz bo'ladi (yuqoridagi funksiyalar orqali) — shunda ham
+// ogohlantirish DB yozuvi va moderatsiya jurnali baribir yuritiladi.
 export async function enforceViolation(
   ctx: Context,
   chatId: number,
@@ -365,25 +402,30 @@ export async function enforceViolation(
 ): Promise<ModerationVerdict> {
   try {
     await ctx.deleteMessage();
+    await logModerationAction(chatId, telegramUserId, username, "deleted", reason, messageText);
   } catch (error) {
-    console.error("[group-moderation] xabarni o'chirishda xato", error);
+    console.error("[group-moderation] xabarni o'chirishda xato (ehtimol admin huquqi yo'q)", error);
   }
-  await logModerationAction(chatId, telegramUserId, username, "deleted", reason, messageText);
 
   if (forceMute) {
-    await muteUser(ctx, chatId, telegramUserId);
-    await logModerationAction(chatId, telegramUserId, username, "muted", reason, null);
-    return { action: "delete_mute", reason };
+    const muted = await muteUser(ctx, chatId, telegramUserId);
+    if (muted) {
+      await logModerationAction(chatId, telegramUserId, username, "muted", reason, null);
+      return { action: "delete_mute", reason };
+    }
+    return { action: "delete_warn", reason };
   }
 
   const count = await warnUser(chatId, telegramUserId);
   await logModerationAction(chatId, telegramUserId, username, "warned", reason, null);
 
   if (count >= WARN_MUTE_THRESHOLD) {
-    await muteUser(ctx, chatId, telegramUserId);
-    await resetWarnings(chatId, telegramUserId);
-    await logModerationAction(chatId, telegramUserId, username, "muted", reason, null);
-    return { action: "delete_mute", reason };
+    const muted = await muteUser(ctx, chatId, telegramUserId);
+    if (muted) {
+      await resetWarnings(chatId, telegramUserId);
+      await logModerationAction(chatId, telegramUserId, username, "muted", reason, null);
+      return { action: "delete_mute", reason };
+    }
   }
 
   return { action: "delete_warn", reason };

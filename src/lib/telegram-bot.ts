@@ -197,6 +197,9 @@ bot.command("antispam", async (ctx) => {
   await ctx.reply(`Anti-spam ${arg === "on" ? "yoqildi ✅" : "o'chirildi ❌"}`);
 });
 
+const NO_PERMISSION_HINT =
+  "❌ Bajarilmadi — botga bu amal uchun kerakli administrator huquqi berilmagan (Delete messages / Ban users). Guruh sozlamalarida botga shu huquqlarni bering.";
+
 bot.command("mute", async (ctx) => {
   if (!(await requireGroupAdmin(ctx))) return;
   const target = getReplyTarget(ctx);
@@ -204,7 +207,11 @@ bot.command("mute", async (ctx) => {
     await ctx.reply("Foydalanuvchini mute qilish uchun uning xabariga reply qilib /mute yozing.");
     return;
   }
-  await muteUser(ctx, ctx.chat!.id, target.id);
+  const ok = await muteUser(ctx, ctx.chat!.id, target.id);
+  if (!ok) {
+    await ctx.reply(NO_PERMISSION_HINT);
+    return;
+  }
   await logModerationAction(ctx.chat!.id, target.id, target.username, "muted", "Admin buyrug'i", null);
   await ctx.reply("✅ Foydalanuvchi mute qilindi (1 soat).");
 });
@@ -216,7 +223,11 @@ bot.command("unmute", async (ctx) => {
     await ctx.reply("Foydalanuvchini unmute qilish uchun uning xabariga reply qilib /unmute yozing.");
     return;
   }
-  await unmuteUser(ctx, ctx.chat!.id, target.id);
+  const ok = await unmuteUser(ctx, ctx.chat!.id, target.id);
+  if (!ok) {
+    await ctx.reply(NO_PERMISSION_HINT);
+    return;
+  }
   await resetWarnings(ctx.chat!.id, target.id);
   await ctx.reply("✅ Foydalanuvchi unmute qilindi.");
 });
@@ -228,7 +239,11 @@ bot.command("ban", async (ctx) => {
     await ctx.reply("Foydalanuvchini ban qilish uchun uning xabariga reply qilib /ban yozing.");
     return;
   }
-  await banUser(ctx, ctx.chat!.id, target.id);
+  const ok = await banUser(ctx, ctx.chat!.id, target.id);
+  if (!ok) {
+    await ctx.reply(NO_PERMISSION_HINT);
+    return;
+  }
   await logModerationAction(ctx.chat!.id, target.id, target.username, "banned", "Admin buyrug'i", null);
   await ctx.reply("✅ Foydalanuvchi ban qilindi.");
 });
@@ -240,7 +255,11 @@ bot.command("unban", async (ctx) => {
     await ctx.reply("Foydalanuvchini unban qilish uchun uning xabariga reply qilib /unban yozing.");
     return;
   }
-  await unbanUser(ctx, ctx.chat!.id, target.id);
+  const ok = await unbanUser(ctx, ctx.chat!.id, target.id);
+  if (!ok) {
+    await ctx.reply(NO_PERMISSION_HINT);
+    return;
+  }
   await ctx.reply("✅ Foydalanuvchi unban qilindi.");
 });
 
@@ -251,7 +270,11 @@ bot.command("kick", async (ctx) => {
     await ctx.reply("Foydalanuvchini kick qilish uchun uning xabariga reply qilib /kick yozing.");
     return;
   }
-  await kickUser(ctx, ctx.chat!.id, target.id);
+  const ok = await kickUser(ctx, ctx.chat!.id, target.id);
+  if (!ok) {
+    await ctx.reply(NO_PERMISSION_HINT);
+    return;
+  }
   await ctx.reply("✅ Foydalanuvchi guruhdan chiqarildi.");
 });
 
@@ -266,10 +289,16 @@ bot.command("warn", async (ctx) => {
   await logModerationAction(ctx.chat!.id, target.id, target.username, "warned", "Admin buyrug'i", null);
   await ctx.reply(`⚠️ Ogohlantirish berildi (${count}/${WARN_MUTE_THRESHOLD}).`);
   if (count >= WARN_MUTE_THRESHOLD) {
-    await muteUser(ctx, ctx.chat!.id, target.id);
-    await resetWarnings(ctx.chat!.id, target.id);
-    await logModerationAction(ctx.chat!.id, target.id, target.username, "muted", "Ogohlantirish chegarasi", null);
-    await ctx.reply("🔇 Ogohlantirish chegarasiga yetdi — foydalanuvchi mute qilindi.");
+    const ok = await muteUser(ctx, ctx.chat!.id, target.id);
+    if (ok) {
+      await resetWarnings(ctx.chat!.id, target.id);
+      await logModerationAction(ctx.chat!.id, target.id, target.username, "muted", "Ogohlantirish chegarasi", null);
+      await ctx.reply("🔇 Ogohlantirish chegarasiga yetdi — foydalanuvchi mute qilindi.");
+    } else {
+      await ctx.reply(
+        "⚠️ Ogohlantirish chegarasiga yetdi, lekin botda mute qilish huquqi yo'q — qo'lda cheklang."
+      );
+    }
   }
 });
 
