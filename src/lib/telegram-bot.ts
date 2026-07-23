@@ -2,8 +2,8 @@ import { Bot, Context, InputFile } from "grammy";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens, businessMessages } from "@/db/schema";
-import { transcribeAudio, generateImage, searchWeb, editPdfContent } from "./gemini";
-import { textToPdf } from "./pdf-generator";
+import { transcribeAudio, generateImage, searchWeb, planPdfEdit } from "./gemini";
+import { applyPdfEdit } from "./pdf-generator";
 import { savePdfSession, getPdfSession, deletePdfSession } from "./pdf-flow";
 import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
@@ -697,11 +697,14 @@ bot.on("message:document", async (ctx) => {
 
 // Yuqoridagi "/pdf" oqimidagi kutilayotgan ko'rsatmani bajaradi: saqlangan
 // file_id orqali PDF qayta yuklab olinadi (bazada faqat file_id saqlanadi,
-// baytlar emas), Gemini ko'rsatma asosida natija matnini qaytaradi, va shu
-// matn yangi PDF hujjatga aylantirilib yuboriladi. Muvaffaqiyatli yoki
-// xato bo'lishidan qat'i nazar sessiya tozalanadi — aks holda foydalanuvchi
-// keyingi har qanday xabari xato tarzda shu eski PDF'ga ko'rsatma sifatida
-// qabul qilinaverardi.
+// baytlar emas), Gemini qaysi sahifa(lar)ga tegishli ekanini va o'sha
+// sahifa(lar) uchun yangi matnni aniqlaydi (planPdfEdit), so'ng FAQAT
+// o'sha sahifa(lar) almashtirilib, qolgan barcha sahifalar asl dizaynda
+// saqlanadi (applyPdfEdit) — foydalanuvchi "dizaynga tegmasin, faqat
+// aytgan joyni o'zgartirsin" deb aniq so'ragani uchun. Muvaffaqiyatli
+// yoki xato bo'lishidan qat'i nazar sessiya tozalanadi — aks holda
+// foydalanuvchi keyingi har qanday xabari xato tarzda shu eski PDF'ga
+// ko'rsatma sifatida qabul qilinaverardi.
 async function handlePdfInstruction(
   ctx: Context,
   session: { fileId: string; fileName: string | null },
@@ -716,10 +719,11 @@ async function handlePdfInstruction(
     if (!res.ok) throw new Error(`PDF faylini yuklab bo'lmadi (${res.status})`);
     const bytes = Buffer.from(await res.arrayBuffer());
 
-    const resultText = await editPdfContent(bytes.toString("base64"), instruction);
-    const pdfBuffer = await textToPdf(resultText, session.fileName ?? undefined);
+    const plan = await planPdfEdit(bytes.toString("base64"), instruction);
+    const pdfBuffer = await applyPdfEdit(bytes, plan.pageNumbers, plan.newText);
 
     const outName = session.fileName ? `tahrirlangan-${session.fileName}` : "tahrirlangan-hujjat.pdf";
+    await ctx.reply(`✅ ${plan.summary}`);
     await ctx.replyWithDocument(new InputFile(pdfBuffer, outName));
   } catch (error) {
     console.error("[telegram-bot] PDF ko'rsatmasini bajarishda xato", error);

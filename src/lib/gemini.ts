@@ -413,16 +413,25 @@ export async function generateImage(prompt: string): Promise<GeneratedImage> {
 // zaxira sifatida ishlatiladi.
 const MAX_PDF_BYTES = 20 * 1024 * 1024;
 
+export type PdfEditPlan = {
+  pageNumbers: number[];
+  newText: string;
+  summary: string;
+};
+
 // "/pdf" oqimi uchun — PDF hujjatni Gemini'ning ko'p modalli hujjat
 // tushunish qobiliyati orqali (audio/rasm kabi inlineData, mimeType
-// "application/pdf") to'g'ridan-to'g'ri o'qib, foydalanuvchi ko'rsatmasini
-// bajaradi (masalan qisqartirish, tarjima qilish, formatini tuzatish) va
-// natijani oddiy matn sifatida qaytaradi — bu matn keyin `textToPdf()`
-// (src/lib/pdf-generator.ts) orqali yangi PDF hujjatga aylantiriladi.
-export async function editPdfContent(
+// "application/pdf") to'g'ridan-to'g'ri o'qib, ko'rsatma ASOSAN qaysi
+// original sahifa(lar)ga tegishli ekanini va o'sha sahifa(lar) o'rnini
+// bosadigan TO'LIQ matnni aniqlaydi. Butun hujjatni qayta yozish O'RNIGA
+// (avvalgi versiyaning kamchiligi — bu hujjat dizaynini butunlay buzardi,
+// foydalanuvchi shikoyat qildi) faqat tegishli sahifalar
+// `applyPdfEdit()` (src/lib/pdf-generator.ts) orqali almashtiriladi,
+// qolgan sahifalar asl holicha saqlanadi.
+export async function planPdfEdit(
   base64Pdf: string,
   instruction: string
-): Promise<string> {
+): Promise<PdfEditPlan> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
@@ -445,12 +454,29 @@ export async function editPdfContent(
           parts: [
             { inlineData: { mimeType: "application/pdf", data: base64Pdf } },
             {
-              text: `Ushbu PDF hujjat asosida quyidagi ko'rsatmani aniq bajar: "${instruction}". Natijani tayyor, tartibli matn ko'rinishida qaytar — bu matn to'g'ridan-to'g'ri yangi PDF hujjatga aylantiriladi, shu sabab faqat yakuniy natija matnini yoz (hech qanday qo'shimcha izoh, markdown belgilari (**, #, va h.k.) yoki "mana natija" kabi kirish so'zlarisiz).`,
+              text: `Foydalanuvchi ushbu PDF hujjatga quyidagi ko'rsatmani berdi: "${instruction}".
+
+VAZIFANG:
+1) Ko'rsatma hujjatning qaysi ASL sahifa(lar)iga tegishli ekanini aniqla (1 dan boshlab raqamlangan sahifa raqamlari).
+2) O'sha sahifa(lar) o'rnini bosadigan TO'LIQ va TAYYOR matnni yoz — bu matnda FAQAT so'ralgan o'zgarish qo'llanilgan bo'lsin, o'sha sahifa(lar)dagi QOLGAN barcha kontent so'zma-so'z ASLIGA MOS saqlansin. Butun hujjatni qayta yozma yoki qayta formatlama — faqat ko'rsatma tegishli bo'lgan qism(lar)ni o'zgartir.
+3) Nima o'zgartirilganini foydalanuvchiga bir qisqa jumlada tushuntir.`,
             },
           ],
         },
       ],
-      generationConfig: { temperature: 0.3 },
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            pageNumbers: { type: "array", items: { type: "integer" } },
+            newText: { type: "string" },
+            summary: { type: "string" },
+          },
+          required: ["pageNumbers", "newText", "summary"],
+        },
+      },
     }),
   });
 
@@ -467,5 +493,10 @@ export async function editPdfContent(
   if (!text) {
     throw new Error("Gemini PDF uchun javob qaytarmadi");
   }
-  return text;
+
+  try {
+    return JSON.parse(text) as PdfEditPlan;
+  } catch {
+    throw new Error("Gemini PDF javobini o'qib bo'lmadi");
+  }
 }
