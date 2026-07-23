@@ -6,7 +6,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { businessMessages, telegramBots, telegramMessages, users } from "@/db/schema";
+import { businessMessages, miniAppMessages, telegramBots, telegramMessages, users } from "@/db/schema";
 import { deleteWebhook, getMe, setWebhook } from "@/lib/telegram-api";
 import { requireUserId } from "./require-user";
 
@@ -84,6 +84,27 @@ export async function listBusinessMessages() {
     .from(businessMessages)
     .where(eq(businessMessages.userId, userId))
     .orderBy(desc(businessMessages.createdAt))
+    .limit(50);
+
+  return rows.map((r) => ({ ...r, createdAtISO: r.createdAt.toISOString() }));
+}
+
+// Mini App'ni ochgan begona (loyiha egasi bo'lmagan) foydalanuvchilarning
+// AI Assistant bilan suhbati — /mehmon sahifasidan yozilgan (src/app/api/assistant/guest/route.ts).
+export async function listMiniAppMessages() {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({
+      id: miniAppMessages.id,
+      fromName: miniAppMessages.fromName,
+      fromUsername: miniAppMessages.fromUsername,
+      text: miniAppMessages.text,
+      answer: miniAppMessages.answer,
+      createdAt: miniAppMessages.createdAt,
+    })
+    .from(miniAppMessages)
+    .where(eq(miniAppMessages.userId, userId))
+    .orderBy(desc(miniAppMessages.createdAt))
     .limit(50);
 
   return rows.map((r) => ({ ...r, createdAtISO: r.createdAt.toISOString() }));

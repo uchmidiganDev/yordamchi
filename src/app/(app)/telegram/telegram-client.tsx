@@ -43,6 +43,8 @@ type BusinessMessageView = {
   createdAtISO: string;
 };
 
+type MiniAppMessageView = BusinessMessageView;
+
 function BotRow({
   bot,
   onToggle,
@@ -175,15 +177,18 @@ export function TelegramClient({
   initialMessages,
   businessConnected,
   initialBusinessMessages,
+  initialMiniAppMessages,
 }: {
   initialBots: BotView[];
   initialMessages: MessageView[];
   businessConnected: boolean;
   initialBusinessMessages: BusinessMessageView[];
+  initialMiniAppMessages: MiniAppMessageView[];
 }) {
   const [bots, setBots] = useState(initialBots);
   const [messages] = useState(initialMessages);
   const [businessMessages] = useState(initialBusinessMessages);
+  const [miniAppMessages] = useState(initialMiniAppMessages);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -237,6 +242,17 @@ export function TelegramClient({
             <h2 className={styles.sectionTitle}>Business xabarlar</h2>
             <div className={styles.msgList}>
               {businessMessages.map((m) => (
+                <BusinessMessageRow key={m.id} message={m} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {miniAppMessages.length > 0 && (
+          <>
+            <h2 className={styles.sectionTitle}>Mini-App xabarlari</h2>
+            <div className={styles.msgList}>
+              {miniAppMessages.map((m) => (
                 <BusinessMessageRow key={m.id} message={m} />
               ))}
             </div>

@@ -5,11 +5,13 @@ const SESSION_COOKIE_NAME = "yordamchi_session";
 
 const PUBLIC_PATHS = [
   "/login",
+  "/mehmon",
   "/api/telegram/webhook",
   "/api/telegram/bots",
   "/api/auth/telegram/start",
   "/api/auth/telegram/status",
   "/api/auth/telegram/webapp",
+  "/api/assistant/guest",
 ];
 
 function isPublicPath(pathname: string) {

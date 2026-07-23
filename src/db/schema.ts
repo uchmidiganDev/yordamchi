@@ -388,6 +388,25 @@ export const businessMessages = pgTable("business_messages", {
     .defaultNow(),
 });
 
+// Telegram Mini App'ni ochgan begona (loyiha egasi bo'lmagan) foydalanuvchilar
+// bilan AI Assistant suhbati — businessMessages'ga o'xshash (userId doim
+// ilova egasi), `chatId` esa Mini App initData'dan kelgan mehmonning
+// Telegram foydalanuvchi ID'si. /telegram sahifasida admin uchun ko'rinadi.
+export const miniAppMessages = pgTable("mini_app_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  fromName: text("from_name"),
+  fromUsername: text("from_username"),
+  text: text("text").notNull(),
+  answer: text("answer"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // AI Website Analyzer: chat bo'yicha oxirgi tahlil natijasi saqlanadi — "To'g'rila"
 // so'ralganda shu yozuvdagi HTML+tahlil asosida yaxshilangan kod yaratiladi
 // (src/lib/website-analyzer.ts). `userId` — doim ilova egasi (single-tenant
@@ -491,3 +510,5 @@ export type TelegramMessage = typeof telegramMessages.$inferSelect;
 export type NewTelegramMessage = typeof telegramMessages.$inferInsert;
 export type BusinessMessage = typeof businessMessages.$inferSelect;
 export type NewBusinessMessage = typeof businessMessages.$inferInsert;
+export type MiniAppMessage = typeof miniAppMessages.$inferSelect;
+export type NewMiniAppMessage = typeof miniAppMessages.$inferInsert;

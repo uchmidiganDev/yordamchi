@@ -51,10 +51,17 @@ export function TelegramMiniApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initData: tg.initData }),
       })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.ok && window.location.pathname === "/login") {
-            router.replace("/");
+        .then(async (res) => {
+          const onLogin = window.location.pathname === "/login";
+          if (res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data?.ok && onLogin) router.replace("/");
+            return;
+          }
+          // 403 — Telegram foydalanuvchisi tasdiqlangan, lekin egasi emas:
+          // to'liq boshqaruv panel o'rniga mehmon suhbat sahifasiga yo'naltiriladi.
+          if (res.status === 403 && onLogin) {
+            router.replace("/mehmon");
           }
         })
         .catch(() => {});
