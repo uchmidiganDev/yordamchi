@@ -31,14 +31,14 @@ export async function synthesizeClonedVoice(text: string): Promise<Buffer> {
     body: JSON.stringify({
       text,
       model_id: "eleven_multilingual_v2",
-      // Past stability (0.5) tabiiy urg'u/ohangni tekislab, robotcha eshitilishga
-      // sabab bo'lgani sinovda aniqlandi — pasaytirilgan qiymat ko'proq tabiiy
-      // intonatsiyaga ruxsat beradi (bir oz barqarorlik hisobiga).
+      // Pastroq stability (0.32) + style (0.35) bilan sinalgan edi — jonli
+      // Mini App sinovida so'zlar aniq-tiniq chiqmay, "dona-dona" gapirmasligi
+      // (mumbling) aniqlandi. Standart qiymatlarga (stability 0.5,
+      // similarity_boost 0.75, style/speed'siz) qaytarilgach eng tiniq va
+      // tabiiy natija shu bo'lgani foydalanuvchi tomonidan tasdiqlandi.
       voice_settings: {
-        stability: 0.32,
-        similarity_boost: 0.8,
-        style: 0.35,
-        use_speaker_boost: true,
+        stability: 0.5,
+        similarity_boost: 0.75,
       },
     }),
   });
