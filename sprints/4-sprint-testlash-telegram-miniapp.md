@@ -42,6 +42,16 @@ va butun tizimni testlab, barqaror mahsulotга aylantirish.
 - Mobil-birinchi dizayn (Sprint 1'da tayyorlangani) Mini App uchun mos keladi.
 - Asosiy ekranlar (bugungi vazifalar, kalendar, AI tahlili) Telegram ichida ishlaydi.
 
+**Holat: bajarildi (2026-07-23, commit `4cf10c5`).** Amalga oshirilgan qism:
+- Root layout'ga (`src/app/layout.tsx`) Telegram WebApp SDK skripti (`telegram-web-app.js`) va `viewport-fit=cover` qo'shildi.
+- Yangi `src/components/telegram-mini-app.tsx` (client) — `WebApp.ready()`/`expand()`, header/fon rangini moslashtirish, `disableVerticalSwipes()`, `BackButton`'ni ichki navigatsiyaga bog'lash.
+- Yangi `src/lib/telegram-webapp-auth.ts` — Telegram `initData`ning HMAC-SHA256 imzosini rasmiy algoritm bo'yicha tekshiradi.
+- Yangi `POST /api/auth/telegram/webapp` — `initData` tekshirilib, `ALLOWED_TELEGRAM_ID`ga mos kelsa sessiya cookie'si o'rnatiladi (mavjud `/start` deeplink login o'zgarmadi, bu qo'shimcha yo'l).
+- `src/proxy.ts`dagi `PUBLIC_PATHS`ga yangi endpoint qo'shildi; `src/lib/telegram-api.ts`ga `setChatMenuButton()` qo'shildi.
+- `scripts/set-mini-app-menu-button.ts` — bot chatining doimiy menyu tugmasini mini-app'ga ulaydigan bir martalik skript (hali ishga tushirilmagan).
+- `src/lib/telegram-bot.ts`ga yangi `/app` buyrug'i (inline web_app tugmasi bilan mini-app'ni ochadi).
+- Build/lint/tsc tekshiruvidan o'tgan va `initData` HMAC tekshiruvi haqiqiy imzo bilan jonli sinovda (dev server) tasdiqlangan. Cron/scheduler, ertalabki-kechki avtomatik xabar va unit/integratsion/E2E testlar hali bajarilmagan (quyidagi vazifalar ro'yxatiga qarang).
+
 ---
 
 ## 5. Testlash va sifat
@@ -62,7 +72,7 @@ va butun tizimni testlab, barqaror mahsulotга aylantirish.
 - [ ] grammY bot + webhook Vercel'da.
 - [ ] Ertalabki reja / kechki tahlilni Telegram'ga formatlab yuborish.
 - [ ] Telegram akkaunt bog'lashni yakunlash.
-- [ ] Telegram Mini App moslash (WebApp SDK, initData auth).
+- [x] Telegram Mini App moslash (WebApp SDK, initData auth).
 - [ ] Unit + integratsion + E2E testlar.
 - [ ] Qo'lda uchdan-oxirgacha test (Telegram + Google real).
 - [ ] Bug-fix va productionга tayyorlash.
@@ -83,7 +93,7 @@ testlardan o'tgan barqaror mahsulot.
 - [ ] Ertalab Telegram'ga bugungi reja keladi.
 - [ ] Kechqurun Telegram'ga yakuniy tahlil + ertangi reja keladi.
 - [ ] Telegram akkaunt ilova bilan to'g'ri bog'lanadi.
-- [ ] Ilova Telegram Mini App sifatida ochiladi va asosiy ekranlar ishlaydi.
+- [x] Ilova Telegram Mini App sifatida ochiladi va asosiy ekranlar ishlaydi.
 - [ ] Unit/integratsion/E2E testlar yozilgan va o'tadi.
 - [ ] Uchdan-oxirgacha (login → vazifa → tahlil → Telegram) real muhitда ishlaydi.
 - [ ] Ma'lum kritik buglar tuzatilgan, mahsulot production'ga tayyor.
@@ -96,3 +106,9 @@ Telegram bilan kiriladigan, maqsad va vazifalarni boshqaradigan, Google
 Calendar bilan sinxronlanadigan, har kuni Gemini orqali avtomatik tahlil qilib
 Telegram'ga reja/xulosa yuboradigan, veb va Telegram Mini App sifatida
 ishlaydigan shaxsiy AI yordamchi — to'liq ishlaydigan holatda.
+
+---
+
+## Hisobot
+
+- **2026-07-23** — Telegram Mini App funksiyasi amalga oshirildi va push qilindi (commit `4cf10c5`): Telegram WebApp SDK ulash (root layout + `telegram-mini-app.tsx`), `initData`ning HMAC-SHA256 imzosini tekshiruvchi `src/lib/telegram-webapp-auth.ts` va `POST /api/auth/telegram/webapp` orqali qo'shimcha avtomatik kirish yo'li, bot menyusiga mini-app tugmasi (`setChatMenuButton`, `scripts/set-mini-app-menu-button.ts`) va `/app` buyrug'i. Build/lint/tsc o'tdi, `initData` tekshiruvi jonli (dev server) sinovda tasdiqlandi. Shu sabab 6-bo'limdagi "Telegram Mini App moslash (WebApp SDK, initData auth)" va 8-bo'limdagi "Ilova Telegram Mini App sifatida ochiladi va asosiy ekranlar ishlaydi" bandlari `[x]` deb belgilandi. Sprintning qolgan qismi (Vercel Cron/scheduler, ertalabki-kechki avtomatik Telegram xabari, Telegram akkaunt bog'lashni yakunlash, unit/integratsion/E2E testlar, production'ga tayyorlash) hali bajarilmagan.

@@ -137,13 +137,13 @@
   <div class="overview">
     <div class="stat"><div class="num">4</div><div class="label">Jami sprint</div></div>
     <div class="stat"><div class="num" style="color:var(--green)">3</div><div class="label">Bajarilgan</div></div>
-    <div class="stat"><div class="num" style="color:var(--yellow)">0</div><div class="label">Jarayonda</div></div>
-    <div class="stat"><div class="num" style="color:var(--gray)">1</div><div class="label">Rejalashtirilgan</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">1</div><div class="label">Jarayonda</div></div>
+    <div class="stat"><div class="num" style="color:var(--gray)">0</div><div class="label">Rejalashtirilgan</div></div>
   </div>
 
   <div class="progress-wrap">
-    <div class="progress-label"><span>Umumiy progress</span><span>75%</span></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+    <div class="progress-label"><span>Umumiy progress</span><span>78%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:78%"></div></div>
   </div>
 
   <div class="sprints">
@@ -229,13 +229,13 @@
           <div class="sprint-num">4</div>
           <h2>Testlash, Telegram Bot va Mini App</h2>
         </div>
-        <span class="badge planned">Rejalashtirilgan</span>
+        <span class="badge progress">Jarayonda</span>
       </div>
-      <p class="sprint-desc">Avtomatik kunlik oqim (Cron), Telegram bot orqali xabar yuborish, Telegram Mini App va butun tizimni testlab barqarorlashtirish.</p>
+      <p class="sprint-desc">Avtomatik kunlik oqim (Cron), Telegram bot orqali xabar yuborish, Telegram Mini App va butun tizimni testlab barqarorlashtirish. <strong>Yangilanish (2026-07-23, commit `4cf10c5`):</strong> Telegram Mini App qismi bajarildi — Telegram WebApp SDK ulandi (root layout + `telegram-mini-app.tsx`), `initData` HMAC-SHA256 tekshiruvi (`telegram-webapp-auth.ts`) va `/api/auth/telegram/webapp` orqali qo'shimcha avtomatik kirish yo'li qo'shildi, bot menyusiga mini-app tugmasi va `/app` buyrug'i qo'shildi. Qolgan qism (Cron/scheduler, ertalabki-kechki avtomatik xabar, Telegram akkaunt bog'lashni yakunlash, testlar, production'ga tayyorlash) hali bajarilmagan.</p>
       <div class="tags">
         <span class="tag">Vercel Cron</span>
         <span class="tag">grammY bot</span>
-        <span class="tag">Telegram Mini App</span>
+        <span class="tag" style="color:var(--green)">Telegram Mini App (bajarildi)</span>
         <span class="tag">Testlar</span>
       </div>
       <div class="deliverable"><strong>Natija:</strong> Belgilangan vaqtda avtomatik tahlil qilib Telegram'ga reja/xulosa yuboradigan, Mini App sifatida ochiladigan barqaror mahsulot.</div>
