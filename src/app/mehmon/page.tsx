@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./mehmon.module.css";
+import { VoiceModal } from "./voice-modal";
 
 type ChatMessage = { role: "user" | "assistant"; text: string };
 
@@ -17,6 +18,7 @@ export default function MehmonPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,6 +129,14 @@ export default function MehmonPage() {
         />
         <button
           type="button"
+          className={styles.micIconBtn}
+          onClick={() => setVoiceOpen(true)}
+          aria-label="Ovozli suhbat"
+        >
+          🎤
+        </button>
+        <button
+          type="button"
           className={styles.sendBtn}
           onClick={handleSend}
           disabled={sending || !input.trim()}
@@ -135,6 +145,8 @@ export default function MehmonPage() {
           ➤
         </button>
       </div>
+
+      {voiceOpen && <VoiceModal onClose={() => setVoiceOpen(false)} />}
     </main>
   );
 }

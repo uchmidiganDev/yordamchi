@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/api/auth/telegram/status",
   "/api/auth/telegram/webapp",
   "/api/assistant/guest",
+  "/api/assistant/voice",
 ];
 
 function isPublicPath(pathname: string) {
