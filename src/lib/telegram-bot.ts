@@ -1,4 +1,4 @@
-import { Bot, Context, InputFile } from "grammy";
+import { Bot, Context, InlineKeyboard, InputFile } from "grammy";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens, businessMessages } from "@/db/schema";
@@ -59,6 +59,9 @@ if (!ALLOWED_TELEGRAM_ID) {
     "ALLOWED_TELEGRAM_ID topilmadi (.env.local ni tekshiring)"
   );
 }
+
+// Mini-app'ni ochish uchun ("/app" buyrug'i va doimiy menyu tugmasi).
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export const bot = new Bot(token);
 
@@ -414,6 +417,21 @@ bot.command("search", async (ctx) => {
     return;
   }
   await handleSearch(ctx, query);
+});
+
+// "/app" buyrug'i — web ilovani Telegram Mini App sifatida ochadigan
+// inline tugma yuboradi. `web_app` tugmasi faqat shaxsiy chatlarda ishlaydi
+// (Bot API cheklovi). Doimiy menyu tugmasi (setChatMenuButton) bilan bir
+// xil manzilga ochiladi — ikkalasi ham bir xil mini-app kirish nuqtasi.
+bot.command("app", async (ctx) => {
+  if (ctx.chat.type !== "private") return;
+  if (!APP_URL) {
+    await ctx.reply("Ilova manzili sozlanmagan (NEXT_PUBLIC_APP_URL topilmadi).");
+    return;
+  }
+  await ctx.reply("Ilovani ochish uchun tugmani bosing:", {
+    reply_markup: new InlineKeyboard().webApp("📱 Ilovani ochish", APP_URL),
+  });
 });
 
 // Uzun matnni Telegram xabar hajmi chegarasidan (4096 belgi) oshib

@@ -72,3 +72,21 @@ export type TelegramWebhookInfo = {
 export function getWebhookInfo(token: string): Promise<TelegramWebhookInfo> {
   return callTelegramApi<TelegramWebhookInfo>(token, "getWebhookInfo");
 }
+
+// Mini-app'ni ochish uchun bot chatining doimiy menyu tugmasi. `chatId`
+// berilmasa, sozlama barcha xususiy chatlar uchun standart bo'ladi.
+export function setChatMenuButton(
+  token: string,
+  webAppUrl: string,
+  text: string,
+  chatId?: number | bigint
+): Promise<unknown> {
+  return callTelegramApi(token, "setChatMenuButton", {
+    ...(chatId !== undefined ? { chat_id: chatId.toString() } : {}),
+    menu_button: {
+      type: "web_app",
+      text,
+      web_app: { url: webAppUrl },
+    },
+  });
+}
