@@ -407,3 +407,65 @@ export async function generateImage(prompt: string): Promise<GeneratedImage> {
 
   throw new Error("Gemini rasm generatsiya qilinmadi");
 }
+
+// Telegram Bot API'ning oddiy fayl yuklash chegarasi (~20MB) — inline
+// base64 so'rov hajmini oqilona darajada ushlab turish uchun ham mos
+// zaxira sifatida ishlatiladi.
+const MAX_PDF_BYTES = 20 * 1024 * 1024;
+
+// "/pdf" oqimi uchun — PDF hujjatni Gemini'ning ko'p modalli hujjat
+// tushunish qobiliyati orqali (audio/rasm kabi inlineData, mimeType
+// "application/pdf") to'g'ridan-to'g'ri o'qib, foydalanuvchi ko'rsatmasini
+// bajaradi (masalan qisqartirish, tarjima qilish, formatini tuzatish) va
+// natijani oddiy matn sifatida qaytaradi — bu matn keyin `textToPdf()`
+// (src/lib/pdf-generator.ts) orqali yangi PDF hujjatga aylantiriladi.
+export async function editPdfContent(
+  base64Pdf: string,
+  instruction: string
+): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
+  }
+  if (Buffer.byteLength(base64Pdf, "base64") > MAX_PDF_BYTES) {
+    throw new Error("PDF hajmi juda katta (20MB dan oshadi)");
+  }
+  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { mimeType: "application/pdf", data: base64Pdf } },
+            {
+              text: `Ushbu PDF hujjat asosida quyidagi ko'rsatmani aniq bajar: "${instruction}". Natijani tayyor, tartibli matn ko'rinishida qaytar — bu matn to'g'ridan-to'g'ri yangi PDF hujjatga aylantiriladi, shu sabab faqat yakuniy natija matnini yoz (hech qanday qo'shimcha izoh, markdown belgilari (**, #, va h.k.) yoki "mana natija" kabi kirish so'zlarisiz).`,
+            },
+          ],
+        },
+      ],
+      generationConfig: { temperature: 0.3 },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `Gemini PDF so'rovi muvaffaqiyatsiz (${res.status}): ${body.slice(0, 300)}`
+    );
+  }
+
+  const data = (await res.json()) as GeminiResponse;
+  const text =
+    data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? "";
+  if (!text) {
+    throw new Error("Gemini PDF uchun javob qaytarmadi");
+  }
+  return text;
+}

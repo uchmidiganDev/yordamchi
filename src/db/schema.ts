@@ -440,6 +440,32 @@ export const expenses = pgTable("expenses", {
     .defaultNow(),
 });
 
+// "/pdf" oqimi uchun: PDF fayl kelganda AI avval "Nima qilay?" deb so'raydi,
+// shu chatdagi KEYINGI xabar (matn yoki ovoz) ko'rsatma sifatida qabul
+// qilinadi. Har bir chat uchun faqat bitta kutilayotgan sessiya bo'lishi
+// kerak — shu sabab `chatId` unique. Telegram fayl bytelarini bazada
+// saqlash o'rniga faqat `fileId` saqlanadi (keyingi xabar kelganda Telegram
+// fayl API orqali qayta yuklab olinadi) — bu bazani keraksiz katta
+// qilmaydi.
+export const pdfSessions = pgTable(
+  "pdf_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+    fileId: text("file_id").notNull(),
+    fileName: text("file_name"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    chatUnique: unique("pdf_sessions_chat_unique").on(t.chatId),
+  })
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type LoginToken = typeof loginTokens.$inferSelect;

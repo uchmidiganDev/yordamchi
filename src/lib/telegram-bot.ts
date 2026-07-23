@@ -2,7 +2,9 @@ import { Bot, Context, InputFile } from "grammy";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens, businessMessages } from "@/db/schema";
-import { transcribeAudio, generateImage, searchWeb } from "./gemini";
+import { transcribeAudio, generateImage, searchWeb, editPdfContent } from "./gemini";
+import { textToPdf } from "./pdf-generator";
+import { savePdfSession, getPdfSession, deletePdfSession } from "./pdf-flow";
 import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
 import { sendVoiceReply } from "./voice-reply";
@@ -674,6 +676,60 @@ async function handleGroupMessage(ctx: Context) {
   }
 }
 
+// "/pdf" oqimi: foydalanuvchi PDF fayl yuborsa, AI avval "Nima qilay?" deb
+// so'raydi (pdf-flow.ts orqali kutilayotgan sessiya sifatida saqlanadi);
+// shu chatdagi KEYINGI matn yoki ovozli xabar ko'rsatma sifatida qabul
+// qilinib, natija yangi PDF hujjat sifatida qaytariladi. FAQAT shaxsiy
+// chatda ishlaydi (guruh/business hozircha qo'llab-quvvatlanmaydi).
+bot.on("message:document", async (ctx) => {
+  if (ctx.chat.type !== "private") return;
+  const doc = ctx.message.document;
+  if (doc.mime_type !== "application/pdf") return;
+
+  const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+  if (!owner) return;
+
+  await savePdfSession(owner.id, ctx.chat.id, doc.file_id, doc.file_name ?? null);
+  await ctx.reply(
+    "📄 PDF qabul qilindi. Bu bilan nima qilib beray? (masalan: \"qisqacha xulosa qiling\", \"ingliz tiliga tarjima qiling\", \"matnini tuzating\") — matn yoki ovozli xabar bilan ayting."
+  );
+});
+
+// Yuqoridagi "/pdf" oqimidagi kutilayotgan ko'rsatmani bajaradi: saqlangan
+// file_id orqali PDF qayta yuklab olinadi (bazada faqat file_id saqlanadi,
+// baytlar emas), Gemini ko'rsatma asosida natija matnini qaytaradi, va shu
+// matn yangi PDF hujjatga aylantirilib yuboriladi. Muvaffaqiyatli yoki
+// xato bo'lishidan qat'i nazar sessiya tozalanadi — aks holda foydalanuvchi
+// keyingi har qanday xabari xato tarzda shu eski PDF'ga ko'rsatma sifatida
+// qabul qilinaverardi.
+async function handlePdfInstruction(
+  ctx: Context,
+  session: { fileId: string; fileName: string | null },
+  instruction: string
+) {
+  try {
+    await ctx.replyWithChatAction("upload_document");
+    const file = await ctx.api.getFile(session.fileId);
+    if (!file.file_path) throw new Error("PDF faylini topib bo'lmadi");
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const res = await fetch(fileUrl);
+    if (!res.ok) throw new Error(`PDF faylini yuklab bo'lmadi (${res.status})`);
+    const bytes = Buffer.from(await res.arrayBuffer());
+
+    const resultText = await editPdfContent(bytes.toString("base64"), instruction);
+    const pdfBuffer = await textToPdf(resultText, session.fileName ?? undefined);
+
+    const outName = session.fileName ? `tahrirlangan-${session.fileName}` : "tahrirlangan-hujjat.pdf";
+    await ctx.replyWithDocument(new InputFile(pdfBuffer, outName));
+  } catch (error) {
+    console.error("[telegram-bot] PDF ko'rsatmasini bajarishda xato", error);
+    const message = error instanceof Error ? error.message : "noma'lum xato";
+    await ctx.reply(`PDF'ni qayta ishlab bo'lmadi: ${message}`);
+  } finally {
+    if (ctx.chat) await deletePdfSession(ctx.chat.id);
+  }
+}
+
 // AI Website Analyzer (URL yuborish / "To'g'rila") va AI Coding Assistant
 // (kod yuborish / "Fix"/"Explain"/"Optimize" va h.k.) kimdan kelishidan
 // qat'i nazar ishlaydi — shaxsiy AI Assistant tekshiruvidan OLDIN.
@@ -690,6 +746,12 @@ bot.on("message:text", async (ctx) => {
 
   const text = ctx.message.text;
   if (text.startsWith("/")) return; // komandalar alohida ishlanadi
+
+  const pendingPdf = await getPdfSession(ctx.chat.id);
+  if (pendingPdf) {
+    await handlePdfInstruction(ctx, pendingPdf, text);
+    return;
+  }
 
   if (isFixRequest(text)) {
     await handleWebsiteFixRequest(ctx);
@@ -751,6 +813,12 @@ bot.on("message:voice", async (ctx) => {
 
   if (!transcript.trim()) {
     await ctx.reply("Kechirasiz, ovozni tushuna olmadim. Iltimos qayta yozib yuboring.");
+    return;
+  }
+
+  const pendingPdf = ctx.chat ? await getPdfSession(ctx.chat.id) : null;
+  if (pendingPdf) {
+    await handlePdfInstruction(ctx, pendingPdf, transcript);
     return;
   }
 
