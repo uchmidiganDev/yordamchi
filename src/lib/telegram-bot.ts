@@ -5,7 +5,8 @@ import { users, loginTokens, businessMessages } from "@/db/schema";
 import { transcribeAudio, generateImage, searchWeb, planPdfEdit } from "./gemini";
 import { applyPdfEdit } from "./pdf-generator";
 import { savePdfSession, getPdfSession, deletePdfSession } from "./pdf-flow";
-import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
+import { answerAssistantQuestion, answerGuestQuestion, type ConversationTurn } from "./assistant";
+import { notifyOwnerOfTask } from "./owner-task";
 import { replyAsPublicAssistant } from "./public-reply";
 import { sendVoiceReply } from "./voice-reply";
 import {
@@ -1054,7 +1055,15 @@ bot.on("business_message", async (ctx) => {
       .filter((r): r is { text: string; answer: string } => r.answer !== null)
       .map((r) => ({ question: r.text, answer: r.answer }));
 
-    const answer = await answerAssistantQuestion(owner.id, text, history, fromName ?? fromUsername);
+    const { answer, ownerTask } = await answerGuestQuestion(
+      owner.id,
+      text,
+      history,
+      fromName ?? fromUsername
+    );
+    if (ownerTask) {
+      await notifyOwnerOfTask(owner.id, ownerTask, `${fromName ?? fromUsername ?? "Mijoz"}, Business`);
+    }
     await logAndReply(answer);
   } catch (error) {
     console.error("[telegram-bot] Business AI Assistant xatosi", error);

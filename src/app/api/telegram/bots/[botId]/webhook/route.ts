@@ -8,7 +8,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { telegramBots, telegramMessages } from "@/db/schema";
 import { sendChatAction, sendMessage } from "@/lib/telegram-api";
-import { answerAssistantQuestion, type ConversationTurn } from "@/lib/assistant";
+import { answerGuestQuestion, type ConversationTurn } from "@/lib/assistant";
+import { notifyOwnerOfTask } from "@/lib/owner-task";
 
 const HISTORY_LIMIT = 6;
 
@@ -96,7 +97,15 @@ export async function POST(
       .filter((r): r is { text: string; answer: string } => r.answer !== null)
       .map((r) => ({ question: r.text, answer: r.answer }));
 
-    const answer = await answerAssistantQuestion(bot.userId, text, history, fromName ?? fromUsername);
+    const { answer, ownerTask } = await answerGuestQuestion(
+      bot.userId,
+      text,
+      history,
+      fromName ?? fromUsername
+    );
+    if (ownerTask) {
+      await notifyOwnerOfTask(bot.userId, ownerTask, `${fromName ?? fromUsername ?? "Mijoz"}, @${bot.username}`);
+    }
     await logAndReply(answer);
   } catch (error) {
     console.error("[telegram bot webhook] AI Assistant xatosi", error);

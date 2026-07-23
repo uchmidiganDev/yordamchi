@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { miniAppMessages, users } from "@/db/schema";
-import { answerAssistantQuestion, type ConversationTurn } from "@/lib/assistant";
+import { answerGuestQuestion, type ConversationTurn } from "@/lib/assistant";
+import { notifyOwnerOfTask } from "@/lib/owner-task";
 import { verifyTelegramWebAppInitData } from "@/lib/telegram-webapp-auth";
 import { transcribeAudio } from "@/lib/gemini";
 import { isElevenLabsConfigured, synthesizeClonedVoice } from "@/lib/elevenlabs";
@@ -87,7 +88,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const answer = await answerAssistantQuestion(owner.id, transcript, history, senderName);
+    const { answer, ownerTask } = await answerGuestQuestion(owner.id, transcript, history, senderName);
+
+    if (ownerTask) {
+      await notifyOwnerOfTask(owner.id, ownerTask, `${senderName ?? "Mehmon"}, Mini App (ovozli)`);
+    }
 
     await db.insert(miniAppMessages).values({
       userId: owner.id,

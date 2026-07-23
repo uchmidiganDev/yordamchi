@@ -8,7 +8,8 @@ import { Context } from "grammy";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { telegramBots, users } from "@/db/schema";
-import { answerAssistantQuestion } from "./assistant";
+import { answerGuestQuestion } from "./assistant";
+import { notifyOwnerOfTask } from "./owner-task";
 import { sendVoiceReply } from "./voice-reply";
 
 const OWNER_TELEGRAM_ID = process.env.ALLOWED_TELEGRAM_ID;
@@ -46,7 +47,14 @@ export async function replyAsPublicAssistant(
 
   try {
     await ctx.replyWithChatAction("typing");
-    const answer = await answerAssistantQuestion(owner.id, text, [], senderName);
+    const { answer, ownerTask } = await answerGuestQuestion(owner.id, text, [], senderName);
+    if (ownerTask) {
+      await notifyOwnerOfTask(
+        owner.id,
+        ownerTask,
+        senderName ? `${senderName}, Telegram` : "Telegram"
+      );
+    }
     if (opts?.withVoice) {
       const ok = await sendVoiceReply(ctx, answer);
       if (!ok) await ctx.reply(answer);

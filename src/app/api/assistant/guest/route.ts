@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { miniAppMessages, users } from "@/db/schema";
-import { answerAssistantQuestion, type ConversationTurn } from "@/lib/assistant";
+import { answerGuestQuestion, type ConversationTurn } from "@/lib/assistant";
+import { notifyOwnerOfTask } from "@/lib/owner-task";
 import { verifyTelegramWebAppInitData } from "@/lib/telegram-webapp-auth";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -60,7 +61,11 @@ export async function POST(req: NextRequest) {
     null;
 
   try {
-    const answer = await answerAssistantQuestion(owner.id, question, history, senderName);
+    const { answer, ownerTask } = await answerGuestQuestion(owner.id, question, history, senderName);
+
+    if (ownerTask) {
+      await notifyOwnerOfTask(owner.id, ownerTask, `${senderName ?? "Mehmon"}, Mini App`);
+    }
 
     await db.insert(miniAppMessages).values({
       userId: owner.id,
