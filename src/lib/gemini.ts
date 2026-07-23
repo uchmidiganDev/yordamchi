@@ -233,15 +233,21 @@ export async function transcribeAudio(
       "x-goog-api-key": apiKey,
     },
     body: JSON.stringify({
+      // Ko'rsatma `systemInstruction` sifatida, audio esa YAKKA holda `contents`
+      // ichida yuboriladi — ikkalasi bitta "user" qismida aralashtirilganda
+      // model ba'zan ko'rsatma matnini transkripsiya natijasiga QO'SHIB
+      // qo'yishi (leak qilishi) aniqlandi (jonli mini-app sinovida topildi).
+      systemInstruction: {
+        parts: [
+          {
+            text: "Ushbu audio yozuvidagi nutqni so'zma-so'z, xatosiz transkripsiya qil. Nutq o'zbek, rus yoki ingliz tilida bo'lishi mumkin — tilni avtomatik aniqla va shu tilda yoz. Faqat transkripsiya matnini qaytar, boshqa hech qanday izoh yoki formatlash qo'shma.",
+          },
+        ],
+      },
       contents: [
         {
           role: "user",
-          parts: [
-            { inlineData: { mimeType, data: base64Audio } },
-            {
-              text: "Ushbu audio yozuvidagi nutqni so'zma-so'z, xatosiz transkripsiya qil. Nutq o'zbek, rus yoki ingliz tilida bo'lishi mumkin — tilni avtomatik anda va shu tilda yoz. Faqat transkripsiya matnini qaytar, boshqa hech qanday izoh yoki formatlash qo'shma.",
-            },
-          ],
+          parts: [{ inlineData: { mimeType, data: base64Audio } }],
         },
       ],
       generationConfig: { temperature: 0.2 },
