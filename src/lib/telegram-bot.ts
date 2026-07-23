@@ -882,6 +882,22 @@ bot.on("business_message", async (ctx) => {
   let text = msg.text;
   let isVoiceOrigin = false;
 
+  // "/pdf" oqimi (asosiy botdagi bilan bir xil mantiq): PDF fayl kelsa
+  // "Nima qilay?" deb so'raladi, keyingi xabar ko'rsatma sifatida qabul
+  // qilinadi. Do'st sinovida aniqlangan: avval bu Business xabarlarida
+  // UMUMAN ishlamas edi (faqat asosiy bot uchun yozilgan edi) — begonalar
+  // odatda botga emas, egasining shaxsiy raqamiga (Business orqali)
+  // yozishadi, shu sabab bu yerga ham qo'shildi.
+  if (!text && msg.document) {
+    if (msg.document.mime_type === "application/pdf") {
+      await savePdfSession(owner.id, chatId, msg.document.file_id, msg.document.file_name ?? null);
+      await ctx.reply(
+        "📄 PDF qabul qilindi. Bu bilan nima qilib beray? (masalan: \"qisqacha xulosa qiling\", \"ingliz tiliga tarjima qiling\", \"matnini tuzating\") — matn yoki ovozli xabar bilan ayting."
+      );
+      return;
+    }
+  }
+
   if (!text && msg.voice) {
     if (!owner.businessVoiceReplyEnabled) {
       await ctx.reply("Hozircha ovozli xabarlarni qabul qilmayapman.");
@@ -909,6 +925,12 @@ bot.on("business_message", async (ctx) => {
 
   if (!text) {
     await ctx.reply("Hozircha faqat matnli yoki ovozli xabarlarni qabul qila olaman.");
+    return;
+  }
+
+  const pendingPdf = await getPdfSession(chatId);
+  if (pendingPdf) {
+    await handlePdfInstruction(ctx, pendingPdf, text);
     return;
   }
 
