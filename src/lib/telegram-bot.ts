@@ -728,7 +728,14 @@ async function handlePdfInstruction(
   } catch (error) {
     console.error("[telegram-bot] PDF ko'rsatmasini bajarishda xato", error);
     const message = error instanceof Error ? error.message : "noma'lum xato";
-    await ctx.reply(`PDF'ni qayta ishlab bo'lmadi: ${message}`);
+    try {
+      await ctx.reply(`PDF'ni qayta ishlab bo'lmadi: ${message}`);
+    } catch (replyError) {
+      // Xatoni xabar qilishning o'zi ham muvaffaqiyatsiz bo'lsa (masalan
+      // Telegram API vaqtinchalik xato bersa), butun webhook so'rovini
+      // 500'ga qulatmasdan shunchaki logga yozib qo'yamiz.
+      console.error("[telegram-bot] Xato haqida xabar berishning o'zi muvaffaqiyatsiz", replyError);
+    }
   } finally {
     if (ctx.chat) await deletePdfSession(ctx.chat.id);
   }
