@@ -429,8 +429,15 @@ bot.command("app", async (ctx) => {
     await ctx.reply("Ilova manzili sozlanmagan (NEXT_PUBLIC_APP_URL topilmadi).");
     return;
   }
-  await ctx.reply("Ilovani ochish uchun tugmani bosing:", {
-    reply_markup: new InlineKeyboard().webApp("📱 Ilovani ochish", APP_URL),
+  // "AI bilan suhbat" tugmasi to'g'ridan-to'g'ri /mehmon'ga ochiladi — bu
+  // sahifa egalikni tekshirmaydi, shuning uchun egasi ham (ovozli suhbat
+  // modalini sinash uchun) undan foydalana oladi, garchi asosiy oqimda
+  // egasi mini-app ochganda avtomatik boshqaruv paneliga tushsa ham.
+  await ctx.reply("Kerakli bo'limni tanlang:", {
+    reply_markup: new InlineKeyboard()
+      .webApp("📱 Boshqaruv paneli", APP_URL)
+      .row()
+      .webApp("🎙️ AI bilan suhbat", `${APP_URL}/mehmon`),
   });
 });
 
