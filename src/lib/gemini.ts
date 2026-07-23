@@ -7,6 +7,7 @@ const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_TTS_VOICE = "Kore";
+const DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image";
 
 // Gemini responseSchema — OpenAPI 3.0 uslubidagi sxema obyekti.
 export type GeminiSchema = Record<string, unknown>;
@@ -251,4 +252,48 @@ export async function synthesizeSpeech(text: string): Promise<Buffer> {
   }
 
   return pcmToWav(Buffer.from(base64Pcm, "base64"));
+}
+
+// Matn tavsifi asosida rasm generatsiya qiladi (`/img` buyrug'i uchun).
+// `responseModalities` ["TEXT","IMAGE"] bo'lishi shart — ba'zi Gemini
+// rasm modellari faqat IMAGE bilan so'ralganda xato qaytaradi; javobdagi
+// qism(lar)dan birinchi inlineData bor bo'lagi rasm sifatida olinadi
+// (modelning matn izohi bo'lishi mumkin bo'lgan qismlari e'tiborsiz
+// qoldiriladi).
+export async function generateImage(prompt: string): Promise<Buffer> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
+  }
+  const model = process.env.GEMINI_IMAGE_MODEL || DEFAULT_IMAGE_MODEL;
+
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `Gemini rasm so'rovi muvaffaqiyatsiz (${res.status}): ${body.slice(0, 300)}`
+    );
+  }
+
+  const data = (await res.json()) as GeminiAudioResponse;
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const base64Image = parts.find((p) => p.inlineData?.data)?.inlineData?.data;
+  if (!base64Image) {
+    throw new Error("Gemini rasm qaytarmadi");
+  }
+
+  return Buffer.from(base64Image, "base64");
 }

@@ -2,7 +2,7 @@ import { Bot, Context, InputFile } from "grammy";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens, businessMessages } from "@/db/schema";
-import { transcribeAudio } from "./gemini";
+import { transcribeAudio, generateImage } from "./gemini";
 import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
 import { sendVoiceReply } from "./voice-reply";
@@ -300,8 +300,10 @@ bot.command("warn", async (ctx) => {
 
 // Chek bo'lmagan xabarlarni AI Assistant'ga yuboradi — javob Bilim bazasi va
 // System Prompt asosida shakllanadi (src/lib/assistant.ts). `withVoice` —
-// ovozli xabardan kelgan savollar uchun javobning ovozli versiyasi ham
-// yuboriladi (oddiy matn savollar uchun false, matn bilan bir xil holat).
+// ovozli xabardan kelgan savollar uchun javob FAQAT ovozli (TTS) shaklda
+// qaytariladi (matn qo'shilmaydi); oddiy matn savollar uchun (false) javob
+// FAQAT matn bo'ladi. TTS xato bersa, foydalanuvchi javobsiz qolmasligi
+// uchun matnga qaytiladi (fallback).
 async function handleAssistantMessage(
   ctx: Context,
   text: string,
@@ -317,13 +319,54 @@ async function handleAssistantMessage(
   try {
     await ctx.replyWithChatAction("typing");
     const answer = await answerAssistantQuestion(user.id, text);
-    await ctx.reply(answer);
-    if (opts?.withVoice) await sendVoiceReply(ctx, answer);
+    if (opts?.withVoice) {
+      const ok = await sendVoiceReply(ctx, answer);
+      if (!ok) await ctx.reply(answer);
+    } else {
+      await ctx.reply(answer);
+    }
   } catch (error) {
     console.error("[telegram-bot] AI Assistant xatosi", error);
     await ctx.reply("Javob berishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
   }
 }
+
+// "/img <tavsif>" buyrug'i — Gemini orqali rasm generatsiya qilib, foto
+// sifatida yuboradi. Business xabarlarida `bot.command()` ishlamaydi
+// (grammy'ning buyruq filtri faqat `message`/`channelPost`ni tekshiradi),
+// shu sabab business_message handlerida shu matn qo'lda parse qilinadi —
+// ikkalasi ham shu bitta yordamchini chaqiradi.
+async function handleImageGeneration(ctx: Context, prompt: string) {
+  try {
+    await ctx.replyWithChatAction("upload_photo");
+    const image = await generateImage(prompt);
+    await ctx.replyWithPhoto(new InputFile(image, "rasm.png"));
+  } catch (error) {
+    console.error("[telegram-bot] Rasm generatsiya qilishda xato", error);
+    const message = error instanceof Error ? error.message : "noma'lum xato";
+    await ctx.reply(`Rasm yaratib bo'lmadi: ${message}`);
+  }
+}
+
+const IMG_COMMAND_RE = /^\/img(?:@\w+)?(?:\s+([\s\S]+))?$/i;
+
+// Matnni "/img"ga mos keladimi tekshiradi. Mos kelmasa `null`, mos kelsa
+// (tavsif bo'sh bo'lsa ham) tavsif matnini qaytaradi.
+function parseImgCommand(text: string): string | null {
+  const match = text.match(IMG_COMMAND_RE);
+  if (!match) return null;
+  return (match[1] ?? "").trim();
+}
+
+bot.command("img", async (ctx) => {
+  if (ctx.chat.type !== "private") return; // faqat shaxsiy chatda
+  const prompt = ctx.match?.toString().trim();
+  if (!prompt) {
+    await ctx.reply("Rasm tavsifini yozing, masalan: /img mushukning kosmosda uchayotgani");
+    return;
+  }
+  await handleImageGeneration(ctx, prompt);
+});
 
 // Uzun matnni Telegram xabar hajmi chegarasidan (4096 belgi) oshib
 // ketmasligi uchun bir necha xabarga bo'lib yuboradi — paragraf chegaralari
@@ -751,6 +794,16 @@ bot.on("business_message", async (ctx) => {
     return;
   }
 
+  const imgPrompt = parseImgCommand(text);
+  if (imgPrompt !== null) {
+    if (!imgPrompt) {
+      await ctx.reply("Rasm tavsifini yozing, masalan: /img mushukning kosmosda uchayotgani");
+      return;
+    }
+    await handleImageGeneration(ctx, imgPrompt);
+    return;
+  }
+
   if (owner.businessVideoDownloadEnabled) {
     const videoKind = detectVideoLink(text);
     if (videoKind) {
@@ -786,9 +839,11 @@ bot.on("business_message", async (ctx) => {
   }
 
   async function logAndReply(answer: string) {
-    await ctx.reply(answer);
     if (isVoiceOrigin && owner!.businessVoiceReplyEnabled) {
-      await sendVoiceReply(ctx, answer);
+      const ok = await sendVoiceReply(ctx, answer);
+      if (!ok) await ctx.reply(answer);
+    } else {
+      await ctx.reply(answer);
     }
     await db.insert(businessMessages).values({
       userId: owner!.id,

@@ -47,8 +47,12 @@ export async function replyAsPublicAssistant(
   try {
     await ctx.replyWithChatAction("typing");
     const answer = await answerAssistantQuestion(owner.id, text, [], senderName);
-    await ctx.reply(answer);
-    if (opts?.withVoice) await sendVoiceReply(ctx, answer);
+    if (opts?.withVoice) {
+      const ok = await sendVoiceReply(ctx, answer);
+      if (!ok) await ctx.reply(answer);
+    } else {
+      await ctx.reply(answer);
+    }
   } catch (error) {
     console.error("[public-reply] AI Assistant xatosi", error);
     await ctx.reply("Javob berishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");

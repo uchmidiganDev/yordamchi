@@ -5,11 +5,17 @@
 import { InputFile, type Context } from "grammy";
 import { synthesizeSpeech } from "./gemini";
 
-export async function sendVoiceReply(ctx: Context, text: string) {
+// `true` qaytarsa ovozli javob muvaffaqiyatli yuborilgan; `false` bo'lsa
+// chaqiruvchi tomon matn bilan zaxira (fallback) javob berishi kerak —
+// aks holda TTS xato bergan holatda foydalanuvchi HECH QANDAY javob
+// olmay qoladi.
+export async function sendVoiceReply(ctx: Context, text: string): Promise<boolean> {
   try {
     const audio = await synthesizeSpeech(text);
     await ctx.replyWithAudio(new InputFile(audio, "javob.wav"));
+    return true;
   } catch (error) {
     console.error("[voice-reply] TTS xatosi", error);
+    return false;
   }
 }
