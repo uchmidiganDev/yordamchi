@@ -49,6 +49,10 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    // `public/` papkadagi statik fayllar (masalan rasm/audio, masalan
+    // `/ai-avatar.png`) ham auth tekshiruvidan tashqarida qoldirilishi kerak —
+    // aks holda sessiyasiz so'rovlar (masalan mehmon sahifasi) ularni
+    // yuklay olmay, `/login`ga yo'naltirilib qoladi.
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|mp3|wav)$).*)",
   ],
 };
