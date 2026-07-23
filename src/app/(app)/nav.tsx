@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GoalsIcon, TasksIcon, AiIcon, DayIcon, WalletIcon, SettingsIcon, LogoutIcon, CalendarIcon, BookIcon, TelegramIcon, CodeIcon, PersonalAiIcon } from "@/components/ui/icons";
+import { GoalsIcon, TasksIcon, AiIcon, DayIcon, SettingsIcon, LogoutIcon, CalendarIcon, BookIcon, TelegramIcon, CodeIcon, PersonalAiIcon } from "@/components/ui/icons";
 import styles from "./nav.module.css";
 
 function CalendarTabIcon() {
@@ -20,7 +20,6 @@ const TABS = [
   { href: "/telegram", label: "Telegram", Icon: TelegramIcon },
   { href: "/shaxsiy-ai", label: "Shaxsiy AI", Icon: PersonalAiIcon },
   { href: "/tahlil", label: "Tahlil", Icon: DayIcon },
-  { href: "/xarajat", label: "Xarajat", Icon: WalletIcon },
   { href: "/sozlamalar", label: "Sozlamalar", Icon: SettingsIcon },
 ];
 
