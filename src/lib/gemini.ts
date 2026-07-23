@@ -121,6 +121,96 @@ export async function generateText(opts: {
   return text.trim();
 }
 
+type GeminiGroundedResponse = {
+  candidates?: {
+    content?: { parts?: { text?: string }[] };
+    groundingMetadata?: {
+      groundingChunks?: { web?: { uri?: string; title?: string } }[];
+    };
+  }[];
+};
+
+export type SearchResult = {
+  answer: string;
+  videoUrl: string | null;
+  sources: { title: string; uri: string }[];
+};
+
+// "/search" buyrug'i uchun — Gemini'ning `google_search` grounding tool'i
+// orqali haqiqiy internet qidiruviga asoslangan javob beradi (o'zining
+// ichki bilimidan emas). Video: grounding manbalari orasidan YouTube
+// havolasi qidiriladi; topilmasa, oddiy YouTube qidiruv havolasi
+// (video yuklab olish emas, faqat qidiruv sahifasiga link) fallback
+// sifatida qaytariladi — bu 2026-07-23'dagi video-yuklab-berish
+// investigatsiyasi (YouTube/Instagram bloklanishi) bilan izchil: bu
+// yerda video FAYLINI yuklamaymiz, faqat havola beramiz.
+export async function searchWeb(query: string): Promise<SearchResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
+  }
+  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Quyidagi mavzu haqida internetdan qidirib, aniq va foydali ma'lumot ber (o'zbek tilida, 4-8 gap): "${query}"`,
+            },
+          ],
+        },
+      ],
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0.4 },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `Gemini qidiruv so'rovi muvaffaqiyatsiz (${res.status}): ${body.slice(0, 300)}`
+    );
+  }
+
+  const data = (await res.json()) as GeminiGroundedResponse;
+  const answer =
+    data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? "";
+  if (!answer) {
+    throw new Error("Gemini qidiruvdan javob qaytarmadi");
+  }
+
+  const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+  const sources = chunks
+    .map((c) => c.web)
+    .filter((w): w is { uri: string; title?: string } => Boolean(w?.uri))
+    .map((w) => ({ uri: w.uri, title: w.title || w.uri }));
+
+  // `uri` har doim vertexaisearch.cloud.google.com orqali qayta yo'naltirish
+  // havolasi (haqiqiy manzil emas) — haqiqiy domen faqat `title`da ko'rinadi
+  // (masalan "youtube.com"). Jonli sinovda aniqlandi: grounding video so'rov
+  // uchun ham deyarli har doim matn/blog manbalarini qaytaradi, YouTube
+  // kamdan-kam chiqadi — shu sabab aksariyat holatda pastdagi oddiy YouTube
+  // qidiruv havolasi (video FAYLI emas, faqat qidiruv sahifasi) ishlatiladi.
+  const videoSource = sources.find((s) => /youtube\.com|youtu\.be/i.test(s.title));
+  const videoUrl =
+    videoSource?.uri ??
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+
+  return {
+    answer,
+    videoUrl,
+    sources: sources.filter((s) => s.uri !== videoSource?.uri).slice(0, 3),
+  };
+}
+
 // Ovozli xabarni (base64 audio) matnga aylantiradi — Gemini'ning ko'p
 // modalli audio tushunish qobiliyatidan foydalanadi (alohida STT xizmati
 // o'rniga), shu bilan bir xil GEMINI_API_KEY'ni ishlatib qo'shimcha

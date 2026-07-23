@@ -2,7 +2,7 @@ import { Bot, Context, InputFile } from "grammy";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, loginTokens, businessMessages } from "@/db/schema";
-import { transcribeAudio, generateImage } from "./gemini";
+import { transcribeAudio, generateImage, searchWeb } from "./gemini";
 import { answerAssistantQuestion, type ConversationTurn } from "./assistant";
 import { replyAsPublicAssistant } from "./public-reply";
 import { sendVoiceReply } from "./voice-reply";
@@ -367,6 +367,51 @@ bot.command("img", async (ctx) => {
     return;
   }
   await handleImageGeneration(ctx, prompt);
+});
+
+// "/search <so'rov>" buyrug'i — Gemini'ning google_search grounding tool'i
+// orqali internetdan qidirib, ma'lumot va mavzuga oid video havolasini
+// qaytaradi. /img'dagi kabi bot.command() (asosiy bot, shaxsiy chat) va
+// business_message'da qo'lda regex parse qilish orqali ishlaydi.
+async function handleSearch(ctx: Context, query: string) {
+  try {
+    await ctx.replyWithChatAction("typing");
+    const result = await searchWeb(query);
+    let message = result.answer;
+    if (result.sources.length > 0) {
+      message +=
+        "\n\n🔗 Manbalar:\n" +
+        result.sources.map((s) => `• ${s.title}: ${s.uri}`).join("\n");
+    }
+    await replyLong(ctx, message);
+    if (result.videoUrl) {
+      await ctx.reply(`🎥 Video: ${result.videoUrl}`);
+    }
+  } catch (error) {
+    console.error("[telegram-bot] Qidiruvda xato", error);
+    const message = error instanceof Error ? error.message : "noma'lum xato";
+    await ctx.reply(`Qidirib bo'lmadi: ${message}`);
+  }
+}
+
+const SEARCH_COMMAND_RE = /^\/search(?:@\w+)?(?:\s+([\s\S]+))?$/i;
+
+// Matnni "/search"ga mos keladimi tekshiradi. Mos kelmasa `null`, mos
+// kelsa (so'rov bo'sh bo'lsa ham) so'rov matnini qaytaradi.
+function parseSearchCommand(text: string): string | null {
+  const match = text.match(SEARCH_COMMAND_RE);
+  if (!match) return null;
+  return (match[1] ?? "").trim();
+}
+
+bot.command("search", async (ctx) => {
+  if (ctx.chat.type !== "private") return; // faqat shaxsiy chatda
+  const query = ctx.match?.toString().trim();
+  if (!query) {
+    await ctx.reply("Qidiruv so'zini yozing, masalan: /search kvant kompyuterlari");
+    return;
+  }
+  await handleSearch(ctx, query);
 });
 
 // Uzun matnni Telegram xabar hajmi chegarasidan (4096 belgi) oshib
@@ -802,6 +847,16 @@ bot.on("business_message", async (ctx) => {
       return;
     }
     await handleImageGeneration(ctx, imgPrompt);
+    return;
+  }
+
+  const searchQuery = parseSearchCommand(text);
+  if (searchQuery !== null) {
+    if (!searchQuery) {
+      await ctx.reply("Qidiruv so'zini yozing, masalan: /search kvant kompyuterlari");
+      return;
+    }
+    await handleSearch(ctx, searchQuery);
     return;
   }
 
