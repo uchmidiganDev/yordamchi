@@ -194,7 +194,17 @@ export function VoiceModal({ onClose }: { onClose: () => void }) {
       </button>
 
       <div className={styles.center}>
-        <div className={`${styles.avatar} ${avatarClass}`}>🤖</div>
+        <div className={`${styles.avatar} ${avatarClass}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ai-avatar.png" alt="AI yordamchi" className={styles.avatarImg} />
+          {status === "speaking" && (
+            <div className={styles.mouthDots}>
+              <span className={styles.mouthDot} />
+              <span className={styles.mouthDot} />
+              <span className={styles.mouthDot} />
+            </div>
+          )}
+        </div>
         <div className={styles.status}>{statusLabel}</div>
         {error && <div className={styles.error}>{error}</div>}
         {caption && !error && (
