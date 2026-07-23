@@ -340,7 +340,8 @@ async function handleImageGeneration(ctx: Context, prompt: string) {
   try {
     await ctx.replyWithChatAction("upload_photo");
     const image = await generateImage(prompt);
-    await ctx.replyWithPhoto(new InputFile(image, "rasm.png"));
+    const ext = image.mimeType === "image/jpeg" ? "jpg" : "png";
+    await ctx.replyWithPhoto(new InputFile(image.buffer, `rasm.${ext}`));
   } catch (error) {
     console.error("[telegram-bot] Rasm generatsiya qilishda xato", error);
     const message = error instanceof Error ? error.message : "noma'lum xato";

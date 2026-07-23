@@ -260,7 +260,9 @@ export async function synthesizeSpeech(text: string): Promise<Buffer> {
 // qism(lar)dan birinchi inlineData bor bo'lagi rasm sifatida olinadi
 // (modelning matn izohi bo'lishi mumkin bo'lgan qismlari e'tiborsiz
 // qoldiriladi).
-export async function generateImage(prompt: string): Promise<Buffer> {
+export type GeneratedImage = { buffer: Buffer; mimeType: string };
+
+export async function generateImage(prompt: string): Promise<GeneratedImage> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
@@ -290,10 +292,13 @@ export async function generateImage(prompt: string): Promise<Buffer> {
 
   const data = (await res.json()) as GeminiAudioResponse;
   const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const base64Image = parts.find((p) => p.inlineData?.data)?.inlineData?.data;
-  if (!base64Image) {
+  const imagePart = parts.find((p) => p.inlineData?.data)?.inlineData;
+  if (!imagePart?.data) {
     throw new Error("Gemini rasm qaytarmadi");
   }
 
-  return Buffer.from(base64Image, "base64");
+  return {
+    buffer: Buffer.from(imagePart.data, "base64"),
+    mimeType: imagePart.mimeType || "image/png",
+  };
 }
