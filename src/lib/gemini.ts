@@ -262,43 +262,58 @@ export async function synthesizeSpeech(text: string): Promise<Buffer> {
 // qoldiriladi).
 export type GeneratedImage = { buffer: Buffer; mimeType: string };
 
+// Rasm modeli tez-tez 503 (UNAVAILABLE, "high demand") qaytaradi — jonli
+// sinovda bir xil so'rov birinchi safar 503, darhol keyingi urinishda 200
+// qaytardi. Shu sabab 503'da bitta marta qisqa kutib qayta urinib ko'ramiz;
+// boshqa xatolarda (masalan 429 kvota) darhol tashlaymiz.
+const IMAGE_MAX_ATTEMPTS = 2;
+const IMAGE_RETRY_DELAY_MS = 3000;
+
 export async function generateImage(prompt: string): Promise<GeneratedImage> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY topilmadi (.env.local ni tekshiring)");
   }
   const model = process.env.GEMINI_IMAGE_MODEL || DEFAULT_IMAGE_MODEL;
-
-  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
+  const requestBody = JSON.stringify({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"],
     },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
-      },
-    }),
   });
 
-  if (!res.ok) {
+  for (let attempt = 1; attempt <= IMAGE_MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: requestBody,
+    });
+
+    if (res.ok) {
+      const data = (await res.json()) as GeminiAudioResponse;
+      const parts = data.candidates?.[0]?.content?.parts ?? [];
+      const imagePart = parts.find((p) => p.inlineData?.data)?.inlineData;
+      if (!imagePart?.data) {
+        throw new Error("Gemini rasm qaytarmadi");
+      }
+      return {
+        buffer: Buffer.from(imagePart.data, "base64"),
+        mimeType: imagePart.mimeType || "image/png",
+      };
+    }
+
     const body = await res.text().catch(() => "");
+    if (res.status === 503 && attempt < IMAGE_MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, IMAGE_RETRY_DELAY_MS));
+      continue;
+    }
     throw new Error(
       `Gemini rasm so'rovi muvaffaqiyatsiz (${res.status}): ${body.slice(0, 300)}`
     );
   }
 
-  const data = (await res.json()) as GeminiAudioResponse;
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = parts.find((p) => p.inlineData?.data)?.inlineData;
-  if (!imagePart?.data) {
-    throw new Error("Gemini rasm qaytarmadi");
-  }
-
-  return {
-    buffer: Buffer.from(imagePart.data, "base64"),
-    mimeType: imagePart.mimeType || "image/png",
-  };
+  throw new Error("Gemini rasm generatsiya qilinmadi");
 }
