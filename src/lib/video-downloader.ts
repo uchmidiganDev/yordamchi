@@ -14,6 +14,38 @@ import ytdl from "@distube/ytdl-core";
 // xavfsizlik zaxirasi bilan pastroq chegara ishlatiladi.
 const MAX_VIDEO_BYTES = 45 * 1024 * 1024;
 
+// Vercel funksiya vaqt chegarasi (webhook route'da 60s'ga oshirilgan) ichida
+// ham bitta sekin/osilib qolgan so'rov butun byudjetni yeb qo'ymasligi
+// uchun har bir tarmoq chaqiruviga alohida chegara qo'yiladi. Jonli sinovda
+// standart 10s funksiya vaqti tugab, Telegram'ga 500 qaytganiga duch
+// kelindi — bu ham shu muammoning oldini olish choralaridan biri.
+const FETCH_TIMEOUT_MS = 20000;
+
+async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error(`${label} juda uzoq davom etdi (${FETCH_TIMEOUT_MS / 1000}s)`)),
+      FETCH_TIMEOUT_MS
+    );
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timeoutId!);
+  }
+}
+
 export type VideoLinkKind = "youtube" | "instagram" | null;
 
 // Butun xabar faqat bitta YouTube yoki Instagram havolasidan iborat
@@ -33,7 +65,7 @@ export async function downloadYoutubeVideo(url: string): Promise<DownloadedVideo
     throw new Error("Bu yaroqli YouTube havolasi emas");
   }
 
-  const info = await ytdl.getInfo(url);
+  const info = await withTimeout(ytdl.getInfo(url), "Video ma'lumotini olish");
   const formats = ytdl.filterFormats(info.formats, "audioandvideo");
   if (formats.length === 0) {
     throw new Error("Bu video uchun audio+video birlashgan format topilmadi");
@@ -52,7 +84,7 @@ export async function downloadYoutubeVideo(url: string): Promise<DownloadedVideo
     throw new Error("Video hajmi juda katta (50MB dan oshadi)");
   }
 
-  const res = await fetch(format.url);
+  const res = await fetchWithTimeout(format.url);
   if (!res.ok) {
     throw new Error(`Videoni yuklab bo'lmadi (${res.status})`);
   }
@@ -66,7 +98,7 @@ export async function downloadYoutubeVideo(url: string): Promise<DownloadedVideo
 }
 
 export async function downloadInstagramVideo(url: string): Promise<DownloadedVideo> {
-  const pageRes = await fetch(url, {
+  const pageRes = await fetchWithTimeout(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
@@ -84,7 +116,7 @@ export async function downloadInstagramVideo(url: string): Promise<DownloadedVid
   }
   const videoUrl = match[1].replace(/&amp;/g, "&");
 
-  const videoRes = await fetch(videoUrl);
+  const videoRes = await fetchWithTimeout(videoUrl);
   if (!videoRes.ok) {
     throw new Error(`Videoni yuklab bo'lmadi (${videoRes.status})`);
   }

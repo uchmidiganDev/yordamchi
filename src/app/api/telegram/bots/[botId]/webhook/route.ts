@@ -12,6 +12,10 @@ import { answerAssistantQuestion, type ConversationTurn } from "@/lib/assistant"
 
 const HISTORY_LIMIT = 6;
 
+// Asosiy webhook route'dagi bilan bir xil xavfsizlik zaxirasi (standart
+// 10s ba'zan Gemini chaqiruvi uchun yetarli emas).
+export const maxDuration = 60;
+
 type TelegramUpdate = {
   message?: {
     text?: string;
