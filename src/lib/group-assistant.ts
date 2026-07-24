@@ -4,6 +4,14 @@
 // shu deyilgan ("Bot Knowledge Base va System Prompt asosida javob bersin").
 // Har guruh uchun alohida kontekst (AI Memory) group_messages orqali
 // saqlanadi (src/lib/group-moderation.ts).
+//
+// Shuningdek, guruh a'zolari egaga (ilova egasi) to'g'ridan-to'g'ri yozganda
+// ham (uning @username'ini mention qilib yoki uning xabariga reply qilib)
+// bot egasining O'RNIGA AI javob beradi — extractOwnerDirectedQuestion().
+// Bu ham xuddi shu answerAssistantQuestion()/answerInGroup() infratuzilmasini
+// qayta ishlatadi, chunki maqsad bir xil: egasining bilim bazasi/System
+// Prompt asosida "u kabi" javob berish (Telegram Business orqali shaxsiy
+// chatda ishlaydigan mexanizmning guruhga kengaytmasi).
 
 import { Context } from "grammy";
 import { answerAssistantQuestion } from "./assistant";
@@ -25,6 +33,35 @@ export function extractMentionQuestion(ctx: Context): string | null {
 
   const repliedTo = ctx.message?.reply_to_message;
   if (repliedTo?.from?.is_bot && repliedTo.from.username?.toLowerCase() === BOT_USERNAME.toLowerCase()) {
+    return text.trim() || null;
+  }
+
+  return null;
+}
+
+// Guruhda kimdir egaga to'g'ridan-to'g'ri yozganini aniqlaydi: eganing
+// @username'ini mention qilgan YOKI eganing avvalgi xabariga reply qilgan.
+// Ega o'zi yozgan (yoki o'zining xabariga reply qilgan) xabarlarni bu funksiya
+// ATAYLAB e'tiborsiz qoldiradi — bu faqat BOSHQALAR ega bilan gaplashmoqchi
+// bo'lganda ishga tushishi kerak.
+export function extractOwnerDirectedQuestion(
+  ctx: Context,
+  ownerTelegramId: number,
+  ownerUsername: string | null
+): string | null {
+  const text = ctx.message?.text;
+  const fromId = ctx.from?.id;
+  if (!text || !fromId || fromId === ownerTelegramId) return null;
+
+  if (ownerUsername) {
+    const mentionTag = `@${ownerUsername}`;
+    if (text.toLowerCase().includes(mentionTag.toLowerCase())) {
+      return text.replace(new RegExp(mentionTag, "gi"), "").trim() || null;
+    }
+  }
+
+  const repliedTo = ctx.message?.reply_to_message;
+  if (repliedTo?.from?.id === ownerTelegramId && !repliedTo.from.is_bot) {
     return text.trim() || null;
   }
 

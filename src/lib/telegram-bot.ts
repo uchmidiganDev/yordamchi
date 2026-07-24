@@ -44,7 +44,7 @@ import {
   warnUser,
   WARN_MUTE_THRESHOLD,
 } from "./group-moderation";
-import { answerInGroup, extractMentionQuestion } from "./group-assistant";
+import { answerInGroup, extractMentionQuestion, extractOwnerDirectedQuestion } from "./group-assistant";
 import { detectVideoLink, downloadVideoFromLink } from "./video-downloader";
 
 const BUSINESS_HISTORY_LIMIT = 6;
@@ -641,6 +641,13 @@ async function handleCodeCommand(ctx: Context, command: CodeCommand) {
 // yo'lga (handleGroupMessage) yo'naltiriladi — chek/website/kod-assistant/AI
 // Assistant DM oqimlari faqat shaxsiy chatda ma'noli, guruh spamida tasodifan
 // ishga tushib ketmasligi uchun bu yerda to'xtatiladi.
+//
+// Shuningdek, guruhda kimdir EGAGA to'g'ridan-to'g'ri yozsa (uning
+// @username'ini mention qilib yoki uning xabariga reply qilib), bot ega
+// O'RNIDA AI javob beradi (extractOwnerDirectedQuestion) — foydalanuvchi
+// aniq shuni so'ragan ("botim guruhdayam mani o'rnimdan gaplashadigan
+// qilib ber"). Botni chaqirish (@BOT_USERNAME/reply-to-bot) ustuvor —
+// ikkalasi ham mos kelsa (kamdan-kam holat), faqat bittasi javob beradi.
 async function handleGroupMessage(ctx: Context) {
   const chatId = ctx.chat?.id;
   const fromId = ctx.from?.id;
@@ -695,10 +702,14 @@ async function handleGroupMessage(ctx: Context) {
     }
   }
 
-  const question = extractMentionQuestion(ctx);
+  const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+  if (!owner) return;
+
+  const question =
+    extractMentionQuestion(ctx) ??
+    extractOwnerDirectedQuestion(ctx, Number(ALLOWED_TELEGRAM_ID), owner.telegramUsername);
   if (question) {
-    const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
-    if (owner) await answerInGroup(ctx, owner.id, question);
+    await answerInGroup(ctx, owner.id, question);
   }
 }
 
