@@ -362,8 +362,27 @@ export type GeneratedImage = { buffer: Buffer; mimeType: string };
 // sinovda bir xil so'rov birinchi safar 503, darhol keyingi urinishda 200
 // qaytardi. Shu sabab 503'da bitta marta qisqa kutib qayta urinib ko'ramiz;
 // boshqa xatolarda (masalan 429 kvota) darhol tashlaymiz.
+//
+// TEZLIK (2026-07-24): jonli o'lchovda (10+ turli so'rov bilan)
+// `thinkingConfig.thinkingLevel: "MINIMAL"` bilan odatiy javob vaqti
+// ~19-30s (Google'ning rasmiy hujjatida ham standart diapazon 12-23s deb
+// ko'rsatilgan) — lekin foydalanuvchi jonli foydalanishda 2 daqiqagacha
+// kutgan holat qayd etildi, bu ehtimol 503'da TO'LIQ qayta urinish (avvalgi
+// kod: 3s kutish + yana to'liq ~20-30s generatsiya) yoki vaqtinchalik yuqori
+// talab bilan bog'liq edi. Shu sabab ikkita tuzatish qo'shildi: (1)
+// thinkingLevel: "MINIMAL" — hech qachon sekinlashtirmaydi, ba'zan sezilarli
+// tezlashtiradi; (2) har bir urinishga AbortController orqali qattiq muddat.
+// MUHIM: bu muddat juda past (masalan 25s) qilib sinalganda ODDIY, muvaffaqiyatli
+// tugaydigan so'rovlarni ham to'xtatib, qayta boshlab yuborib, natijada
+// UMUMIY vaqtni YOMONLASHTIRGANI aniqlandi (masalan 30s'da tugaydigan so'rov
+// 25s'da to'xtatilib, yana ~20-30s'lik yangi urinish bilan ~50-55s'ga
+// cho'zilgan). Shu sabab 45s tanlandi — oddiy diapazon (19-30s)dan yetarlicha
+// baland, shuning uchun deyarli hech qachon ishga tushmaydi, lekin haqiqiy
+// "osilib qolish" holatida umumiy vaqtni (45s + qayta urinish) ~2 daqiqadan
+// ancha pastga tushiradi va aniq xato xabari bilan tugaydi.
 const IMAGE_MAX_ATTEMPTS = 2;
-const IMAGE_RETRY_DELAY_MS = 3000;
+const IMAGE_RETRY_DELAY_MS = 1000;
+const IMAGE_ATTEMPT_TIMEOUT_MS = 45_000;
 
 export async function generateImage(prompt: string): Promise<GeneratedImage> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -375,18 +394,34 @@ export async function generateImage(prompt: string): Promise<GeneratedImage> {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       responseModalities: ["TEXT", "IMAGE"],
+      thinkingConfig: { thinkingLevel: "MINIMAL" },
     },
   });
 
   for (let attempt = 1; attempt <= IMAGE_MAX_ATTEMPTS; attempt++) {
-    const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: requestBody,
-    });
+    const timeoutController = new AbortController();
+    const timeout = setTimeout(() => timeoutController.abort(), IMAGE_ATTEMPT_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: requestBody,
+        signal: timeoutController.signal,
+      });
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.name === "AbortError";
+      if (isTimeout && attempt < IMAGE_MAX_ATTEMPTS) continue;
+      throw isTimeout
+        ? new Error("Gemini rasm so'rovi vaqt chegarasidan oshib ketdi (juda band)")
+        : error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (res.ok) {
       const data = (await res.json()) as GeminiAudioResponse;
