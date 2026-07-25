@@ -652,6 +652,21 @@ async function handleGroupMessage(ctx: Context) {
   const chatId = ctx.chat?.id;
   const fromId = ctx.from?.id;
   const text = ctx.message?.text;
+  // VAQTINCHALIK DIAGNOSTIKA (2026-07-25): guruhda owner-directed javob
+  // ishlamayotgani sababini aniqlash uchun. Muammo tuzatilgach olib
+  // tashlanadi.
+  console.log("[handleGroupMessage] DEBUG", {
+    chatId,
+    chatType: ctx.chat?.type,
+    fromId,
+    fromUsername: ctx.from?.username,
+    isBot: ctx.from?.is_bot,
+    text,
+    hasReplyTo: Boolean(ctx.message?.reply_to_message),
+    replyToFromId: ctx.message?.reply_to_message?.from?.id,
+    replyToFromUsername: ctx.message?.reply_to_message?.from?.username,
+    replyToIsBot: ctx.message?.reply_to_message?.from?.is_bot,
+  });
   if (!chatId || !fromId || !text || ctx.from?.is_bot) return;
 
   if (await isAntispamEnabled(chatId)) {
@@ -703,11 +718,25 @@ async function handleGroupMessage(ctx: Context) {
   }
 
   const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+  console.log("[handleGroupMessage] DEBUG owner", {
+    found: Boolean(owner),
+    ownerTelegramUsername: owner?.telegramUsername,
+    ALLOWED_TELEGRAM_ID,
+  });
   if (!owner) return;
 
-  const question =
-    extractMentionQuestion(ctx) ??
-    extractOwnerDirectedQuestion(ctx, Number(ALLOWED_TELEGRAM_ID), owner.telegramUsername);
+  const mentionQuestion = extractMentionQuestion(ctx);
+  const ownerQuestion = extractOwnerDirectedQuestion(
+    ctx,
+    Number(ALLOWED_TELEGRAM_ID),
+    owner.telegramUsername
+  );
+  console.log("[handleGroupMessage] DEBUG question", {
+    mentionQuestion,
+    ownerQuestion,
+    BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
+  });
+  const question = mentionQuestion ?? ownerQuestion;
   if (question) {
     await answerInGroup(ctx, owner.id, question);
   }
