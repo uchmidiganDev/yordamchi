@@ -29,3 +29,13 @@ export function formatTimeUz(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+// "YYYY-MM-DD" (masalan tz.ts'dagi dateStrInTz natijasi) satrini o'zbekcha
+// "D-oy, YYYY" ko'rinishiga o'giradi — Date obyektining getDate()/getMonth()
+// server jarayoni vaqt mintaqasiga (odatda UTC) tayanishi mumkinligi sabab,
+// foydalanuvchi mintaqasida hisoblangan sana satridan to'g'ridan-to'g'ri
+// ishlash uchun (masalan cron xabarlarida).
+export function formatDateStrUz(dateStr: string) {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${d}-${MONTHS_UZ[m - 1]}`;
+}

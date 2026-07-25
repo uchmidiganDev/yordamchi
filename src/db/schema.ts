@@ -53,6 +53,11 @@ export const users = pgTable("users", {
   timezone: text("timezone").notNull().default("Asia/Tashkent"),
   morningTime: time("morning_time").notNull().default("08:00"),
   eveningTime: time("evening_time").notNull().default("21:00"),
+  // Vercel Cron orqali ertalabki/kechqurungi avtomatik tahlil-xabar
+  // yuborilgan oxirgi sana (foydalanuvchi mintaqasida, YYYY-MM-DD) — bir
+  // kunda ikki marta yuborilib ketmasligi uchun (src/app/api/cron/daily-analysis).
+  lastMorningSentDate: text("last_morning_sent_date"),
+  lastEveningSentDate: text("last_evening_sent_date"),
   // AI Assistant uchun moslashtirilgan system prompt. Bo'sh bo'lsa
   // ilovadagi standart prompt ishlatiladi (src/lib/actions/assistant.ts).
   assistantSystemPrompt: text("assistant_system_prompt"),
