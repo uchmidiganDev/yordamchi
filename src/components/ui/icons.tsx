@@ -135,6 +135,17 @@ export function CodeIcon(p: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function HqIcon(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} {...p}>
+      <path d="M4 20V9l8-5 8 5v11" />
+      <path d="M4 20h16" />
+      <path d="M9 20v-6h6v6" />
+      <path d="M9 9h.01M15 9h.01M12 6h.01" />
+    </svg>
+  );
+}
+
 export function LogoutIcon(p: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" {...stroke} {...p}>

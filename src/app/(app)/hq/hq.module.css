@@ -1,0 +1,481 @@
+.cabinet {
+  --void: #090b12;
+  --panel: #11141f;
+  --floor: #12141f;
+  --floor-line: #1e2337;
+  --wall: #0c0e17;
+  --amber: #f5a742;
+  --cyan: #4fd6e0;
+  --ink: #eef1f7;
+  --muted: #7c85a3;
+  --muted-dim: #4d5470;
+  --hairline: #262c45;
+
+  width: 100%;
+  max-width: 1460px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #12151f, #0b0d15);
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(14px, 2.2vw, 22px) clamp(16px, 3vw, 28px);
+  border-bottom: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  flex-wrap: wrap;
+}
+.eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+}
+.eyebrowDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.title {
+  font-family: var(--font-pixel), monospace;
+  font-size: clamp(14px, 2.4vw, 21px);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  margin: 0;
+  text-shadow: 0 0 18px rgba(245, 167, 66, 0.35);
+}
+.title span {
+  color: var(--amber);
+}
+.hudStats {
+  display: flex;
+  gap: clamp(10px, 2vw, 26px);
+  font-family: var(--font-mono), monospace;
+  flex-shrink: 0;
+}
+.stat {
+  text-align: right;
+}
+.statLabel {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-dim);
+  display: block;
+  margin-bottom: 3px;
+}
+.statValue {
+  font-size: clamp(13px, 1.6vw, 16px);
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.statValueOn {
+  color: var(--amber);
+}
+
+.snapshotNote {
+  margin: 0;
+  padding: 8px clamp(16px, 3vw, 28px);
+  font-family: var(--font-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--muted-dim);
+  border-bottom: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.bodyGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 296px);
+}
+@media (max-width: 860px) {
+  .bodyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stageWrap {
+  position: relative;
+  background: var(--wall);
+  border-right: 1px solid var(--hairline);
+  overflow-x: auto;
+}
+@media (max-width: 860px) {
+  .stageWrap {
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  min-width: 760px;
+  aspect-ratio: 16 / 12.4;
+  background:
+    repeating-linear-gradient(0deg, var(--floor-line) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(90deg, var(--floor-line) 0 1px, transparent 1px 34px),
+    var(--floor);
+}
+
+.room {
+  position: absolute;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--rc) 32%, var(--hairline));
+  background:
+    radial-gradient(ellipse at 50% 26%, color-mix(in srgb, var(--rc) 12%, transparent), transparent 68%),
+    color-mix(in srgb, var(--rc) 3%, transparent);
+}
+.roomLabel {
+  position: absolute;
+  top: 9px;
+  left: 16px;
+  right: 16px;
+}
+.roomName {
+  font-family: var(--font-pixel), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--rc);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--rc) 55%, transparent);
+}
+.roomMission {
+  font-family: var(--font-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.desk {
+  position: absolute;
+  width: clamp(30px, 5.2%, 50px);
+  aspect-ratio: 1.5 / 1;
+  transform: translate(-50%, -28%);
+  border-radius: 4px;
+  background: linear-gradient(160deg, #232945, #171a29);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+.desk::before {
+  content: attr(data-icon);
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 14%;
+  height: 42%;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dc) 30%, #0a0c14);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--dc) 55%, transparent);
+  color: color-mix(in srgb, var(--dc) 82%, white);
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  font-size: 6.6px;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deskLabel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  white-space: nowrap;
+  font-family: var(--font-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.table {
+  position: absolute;
+  width: 15%;
+  aspect-ratio: 1.9 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #1c2136 0%, #171b2c 72%, transparent 100%);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+.table::after {
+  content: attr(data-tag);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: var(--muted-dim);
+}
+
+.agent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(24px, 4.1%, 38px);
+  transform: translate(-50%, -92%);
+  transition-property: left, top;
+  transition-timing-function: cubic-bezier(0.5, 0.05, 0.4, 0.95);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tag {
+  font-family: var(--font-mono), monospace;
+  font-size: 7.6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c) 68%, white);
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.bot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1.05;
+  border-radius: 42% 42% 36% 36% / 52% 52% 34% 34%;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 72%, white), var(--c));
+  box-shadow: inset 0 -5px 8px rgba(0, 0, 0, 0.28), 0 5px 10px rgba(0, 0, 0, 0.4);
+}
+.agentIdle .bot {
+  animation: idlebob 2.6s ease-in-out infinite;
+}
+.antenna {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 2px;
+  height: 8px;
+  background: var(--c);
+  transform: translateX(-50%);
+}
+.antenna::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 7px var(--c);
+  transform: translateX(-50%);
+}
+.visor {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  top: 30%;
+  height: 24%;
+  border-radius: 40%;
+  background: rgba(8, 9, 15, 0.88);
+}
+.visor::before,
+.visor::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 14%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #f4f6fb;
+  transform: translateY(-50%);
+  box-shadow: 0 0 4px rgba(244, 246, 251, 0.7);
+}
+.visor::before {
+  left: 22%;
+}
+.visor::after {
+  right: 22%;
+}
+.legs {
+  display: flex;
+  justify-content: space-between;
+  width: 52%;
+  margin-top: 2px;
+}
+.leg {
+  width: 30%;
+  height: 6px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--c) 55%, #05060a);
+}
+.agentWalking .leg:nth-child(1) {
+  animation: legswing 0.38s ease-in-out infinite alternate;
+}
+.agentWalking .leg:nth-child(2) {
+  animation: legswing 0.38s ease-in-out infinite alternate-reverse;
+}
+.shadowBlob {
+  width: 60%;
+  height: 5px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.5), transparent);
+}
+.bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  max-width: 130px;
+  width: max-content;
+  transform: translate(-50%, -4px) scale(0.92);
+  background: var(--ink);
+  color: #14161f;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 5px 8px;
+  border-radius: 8px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  z-index: 25;
+}
+.bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+.agentTalking .bubble {
+  opacity: 1;
+  transform: translate(-50%, -8px) scale(1);
+}
+
+@keyframes legswing {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-3.5px);
+  }
+}
+@keyframes idlebob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.logPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+}
+.logHead {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.logBody {
+  padding: 8px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+@media (max-width: 860px) {
+  .logBody {
+    max-height: 240px;
+  }
+}
+.logRow {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 6px;
+  border-radius: 6px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.35s ease, transform 0.35s ease, background 0.2s ease;
+}
+.logRowShow {
+  opacity: 1;
+  transform: translateY(0);
+}
+.logRow:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.logTime {
+  font-family: var(--font-mono), monospace;
+  font-size: 9.5px;
+  color: var(--muted-dim);
+  font-variant-numeric: tabular-nums;
+}
+.logDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  align-self: center;
+  box-shadow: 0 0 6px currentColor;
+}
+.logLine {
+  font-size: 11px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.logLine b {
+  font-weight: 600;
+}
+.logLine i {
+  font-style: normal;
+  color: var(--muted);
+}
+
+.reduced .eyebrowDot,
+.reduced .agentIdle .bot,
+.reduced .agentWalking .leg {
+  animation: none !important;
+}
+.reduced .agent {
+  transition: none !important;
+}
