@@ -15,16 +15,42 @@ function getApiKey(): string {
   return apiKey;
 }
 
+// Ko'rsatmada nutq so'ralganini taxminiy aniqlash (oddiy kalit-so'z
+// evristikasi). Jonli sinovda aniqlandi: avvalgi versiya HAR DOIM (nutq
+// so'ralmagan, faqat harakat so'ralgan ko'rsatmalarda ham) "gap aytsa,
+// lab-sinxron bilan aytsin" jumlasini Veo'ga qo'shib yuborardi — bu ehtimol
+// Veo'ni keraksiz audio/nutq generatsiyaga undab, harakat-ko'rsatmalarida ham
+// "audio bilan bog'liq muammo" xavfsizlik blokiga (RAI) tutilib qolishga
+// sabab bo'lgan. Endi nutq ANIQ so'ralmasa, aksincha odam gapirmasligi va
+// video ovozsiz/faqat fon tovushi bilan bo'lishi aniq talab qilinadi.
+const SPEECH_STEMS = ["de", "ayt", "gapir", "sozla", "so'zla", "tabrikla", "salomla"];
+
+function instructionImpliesSpeech(instruction: string): boolean {
+  if (/["'«»]/.test(instruction)) return true;
+  const words = instruction.toLowerCase().split(/\s+/);
+  return words.some((word) => SPEECH_STEMS.some((stem) => word.startsWith(stem)));
+}
+
 // Foydalanuvchining erkin (o'zbekcha, so'zlashuv uslubidagi) ko'rsatmasini
-// Veo prompt'iga o'raydi — rasmdagi odam asosida video, gapirish kerak
-// bo'lsa tabiiy lab-sinxron bilan. BIRINCHI URINISH sifatida yozilgan —
-// sifat live sinovda tekshirilib, kerak bo'lsa keyinroq aniqlashtiriladi.
+// Veo prompt'iga o'raydi — rasmdagi odam asosida video. BIRINCHI URINISH
+// sifatida yozilgan — sifat live sinovda tekshirilib, kerak bo'lsa keyinroq
+// aniqlashtiriladi.
 function buildVeoPrompt(instruction: string): string {
-  return (
+  const base =
     `Rasmda ko'ringan odam asosida qisqa video yarat. Ko'rsatma: ${instruction}. ` +
-    `Agar ko'rsatmada odam biror gap aytishi ko'zda tutilgan bo'lsa, aynan shu ` +
-    `so'zlarni tabiiy ohang va aniq lab-sinxron bilan aytsin. Fon va muhit ` +
-    `rasmdagi kabi saqlansin.`
+    `Fon va muhit rasmdagi kabi saqlansin.`;
+
+  if (instructionImpliesSpeech(instruction)) {
+    return (
+      base +
+      ` Ko'rsatmada aytilishi ko'zda tutilgan so'zlarni odam tabiiy ohang va ` +
+      `aniq lab-sinxron bilan aytsin.`
+    );
+  }
+  return (
+    base +
+    ` Odam hech qanday gap aytmasin va video ovozsiz yoki faqat tabiiy fon ` +
+    `tovushlari bilan bo'lsin.`
   );
 }
 
