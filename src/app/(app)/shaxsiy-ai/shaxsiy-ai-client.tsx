@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/Card";
 import {
   setLinkAnalysisEnabled,
   setVideoDownloadEnabled,
-  setVideoGenerationEnabled,
   setVoiceReplyEnabled,
   type ShaxsiyAiSettings,
 } from "@/lib/actions/shaxsiy-ai";
@@ -104,13 +103,6 @@ export function ShaxsiyAiClient({ initialSettings }: { initialSettings: ShaxsiyA
           hint="Kimdir YouTube yoki Instagram havolasini yuborsa, AI videoni yuklab, faylni to'g'ridan-to'g'ri yuboradi. DIQQAT: bu rasmiy xizmat emas — ba'zan (video juda katta bo'lsa yoki platforma tuzilmasi o'zgarsa) ishlamasligi mumkin."
           initialEnabled={initialSettings.videoDownloadEnabled}
           onToggle={setVideoDownloadEnabled}
-        />
-
-        <ToggleCard
-          title="Rasmdan AI video yaratish"
-          hint="Kimdir sizga rasm yuborsa (va rasmdagi odam nima desin — caption yoki keyingi xabarda aytsa), AI shu rasm asosida qisqa video yaratib yuboradi. DIQQAT: bu HAQIQIY PULGA TUSHADI (taxminan $1.2/video) — shu sababli standart holatda o'chiq. Yoqilganda ham begonalar uchun kunlik limit qo'llanadi."
-          initialEnabled={initialSettings.videoGenerationEnabled}
-          onToggle={setVideoGenerationEnabled}
         />
       </div>
     </div>
