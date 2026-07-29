@@ -2,9 +2,16 @@ import { webhookCallback } from "grammy";
 import { bot } from "@/lib/telegram-bot";
 
 // Standart 10s'dan uzunroq — video yuklab berish (YouTube/Instagram), sayt
-// tahlili va rasm generatsiya (/img) kabi amallar ba'zan undan ko'proq vaqt
-// oladi.
-export const maxDuration = 60;
+// tahlili, rasm generatsiya (/img) va rasm->video (Veo) kabi amallar ba'zan
+// undan ko'proq vaqt oladi. Veo oqimi ayniqsa uzun: submitVideoJob (503'da
+// qayta urinish bilan ~40s'gacha) + waitForVideoJob (qattiq 45s kutish) +
+// video yuklab-yuborish yig'indisi 60s'dan oshib ketishi mumkin edi — bu
+// production'da (Vercel funksiya majburan o'chirilgani sabab) "tayyorlanmoqda"
+// xabaridan keyin javob kelmasligiga olib kelgan (localhost'da esa duration
+// cheklovi yo'qligi sabab bu ko'rinmagan edi). `vercel.json`dagi
+// `"fluid": true` Hobby tarifida 300s'gacha ruxsat beradi — shu doirada
+// xavfsiz zaxira bilan 120s'ga oshirildi.
+export const maxDuration = 120;
 
 // MUHIM: `export const maxDuration` faqat Vercel funksiya vaqtini
 // belgilaydi — grammy'ning o'zining `webhookCallback()`i ICHKI ravishda
