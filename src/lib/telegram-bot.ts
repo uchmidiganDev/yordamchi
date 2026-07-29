@@ -1,10 +1,13 @@
 import { Bot, Context, InlineKeyboard, InputFile } from "grammy";
-import { eq, and, desc } from "drizzle-orm";
+import { after } from "next/server";
+import { eq, and, desc, gte, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { users, loginTokens, businessMessages } from "@/db/schema";
+import { users, loginTokens, businessMessages, veoJobs } from "@/db/schema";
 import { transcribeAudio, generateImage, searchWeb, planPdfEdit } from "./gemini";
 import { applyPdfEdit } from "./pdf-generator";
 import { savePdfSession, getPdfSession, deletePdfSession } from "./pdf-flow";
+import { savePhotoSession, getPhotoSession, deletePhotoSession } from "./photo-flow";
+import { submitVideoJob, waitForVideoJob, downloadVideoBytes } from "./veo";
 import { answerAssistantQuestion, answerGuestQuestion, type ConversationTurn } from "./assistant";
 import { notifyOwnerOfTask } from "./owner-task";
 import { replyAsPublicAssistant } from "./public-reply";
@@ -39,6 +42,11 @@ import { answerInGroup, extractMentionQuestion, extractOwnerDirectedQuestion } f
 import { detectVideoLink, downloadVideoFromLink } from "./video-downloader";
 
 const BUSINESS_HISTORY_LIMIT = 6;
+
+// Rasm -> AI video (Veo) begona (business yoki ochiq DM'dagi begona)
+// so'rovlar uchun kunlik chegara — haqiqiy pul sarflanadigani sabab
+// (~$1.2/video). Egasining o'z DM'ida cheklovsiz.
+const VEO_DAILY_GUEST_LIMIT = Number(process.env.VEO_DAILY_GUEST_LIMIT || "5");
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
@@ -664,6 +672,152 @@ async function handlePdfInstruction(
   }
 }
 
+// Rasm -> AI video generatsiya (Google Veo): submit qilingach fon rejimida
+// (Next.js `after()`) natija kutiladi va tugagach video Telegram'ga
+// yuboriladi. Bounded wait — belgilangan vaqt ichida tugamasa (odatiy holat
+// EMAS, lekin Vercel funksiya vaqti cheklangani sabab) aniq xato xabari
+// bilan to'xtatiladi va veoJobs "failed" belgilanadi — /img'dagi bilan bir
+// xil "eng yaxshi urinish, cheklangan kutish" naqshi (2026-07-24'dagi qaror).
+const VEO_WAIT_DEADLINE_MS = 45_000;
+
+async function processVeoJob(jobId: string, chatId: number, operationName: string) {
+  const result = await waitForVideoJob(operationName, VEO_WAIT_DEADLINE_MS);
+
+  if ("error" in result) {
+    await db
+      .update(veoJobs)
+      .set({ status: "failed", errorMessage: result.error, updatedAt: new Date() })
+      .where(eq(veoJobs.id, jobId));
+    await bot.api
+      .sendMessage(chatId, `Video yaratib bo'lmadi: ${result.error}`)
+      .catch((error) => console.error("[telegram-bot] Veo xato xabarini yuborishda xato", error));
+    return;
+  }
+
+  try {
+    await bot.api.sendChatAction(chatId, "upload_video").catch(() => {});
+    const buffer = await downloadVideoBytes(result.videoUri);
+    await bot.api.sendVideo(chatId, new InputFile(buffer, "video.mp4"));
+    await db
+      .update(veoJobs)
+      .set({ status: "done", updatedAt: new Date() })
+      .where(eq(veoJobs.id, jobId));
+  } catch (error) {
+    console.error("[telegram-bot] Veo videoni yuborishda xato", error);
+    const message = error instanceof Error ? error.message : "noma'lum xato";
+    await db
+      .update(veoJobs)
+      .set({ status: "failed", errorMessage: message, updatedAt: new Date() })
+      .where(eq(veoJobs.id, jobId));
+    await bot.api
+      .sendMessage(chatId, `Video yaratildi, lekin yuborib bo'lmadi: ${message}`)
+      .catch((sendError) => console.error("[telegram-bot] Veo xato xabarini yuborishda xato", sendError));
+  }
+}
+
+// Begona (business yoki ochiq DM'dagi begona) so'rovlar uchun kunlik chegara
+// — bugun shu egaga tegishli, EGANING O'Z DM chatidan kelmagan veoJobs soni.
+async function isVeoGuestQuotaExceeded(ownerId: string): Promise<boolean> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const rows = await db
+    .select({ id: veoJobs.id })
+    .from(veoJobs)
+    .where(
+      and(
+        eq(veoJobs.userId, ownerId),
+        gte(veoJobs.createdAt, startOfDay),
+        ne(veoJobs.chatId, BigInt(ALLOWED_TELEGRAM_ID as string))
+      )
+    );
+  return rows.length >= VEO_DAILY_GUEST_LIMIT;
+}
+
+// Rasm+ko'rsatma tayyor bo'lganda haqiqiy Veo topshirig'ini yuboradi: rasm
+// file_id orqali qayta yuklab olinadi (bazada faqat file_id saqlanadi,
+// baytlar emas — pdf-flow.ts'dagi bilan bir xil naqsh), submitVideoJob()
+// bilan topshiriladi, veoJobs'ga yozib qo'yiladi, foydalanuvchiga darhol
+// "tayyorlanmoqda" xabari beriladi va natija fon rejimida (`after()`)
+// kutib olinadi — bu bilan webhook so'rovining o'zi darhol tugaydi.
+async function handlePhotoInstruction(
+  ctx: Context,
+  ownerId: string,
+  chatId: number,
+  fileId: string,
+  instruction: string,
+  isGuest: boolean
+) {
+  if (isGuest && (await isVeoGuestQuotaExceeded(ownerId))) {
+    await ctx.reply(
+      `Bugungi video yaratish limiti (${VEO_DAILY_GUEST_LIMIT} ta) tugadi. Ertaga qayta urinib ko'ring.`
+    );
+    await deletePhotoSession(chatId);
+    return;
+  }
+
+  try {
+    await ctx.replyWithChatAction("upload_video");
+    const file = await ctx.api.getFile(fileId);
+    if (!file.file_path) throw new Error("Rasm faylini topib bo'lmadi");
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const res = await fetch(fileUrl);
+    if (!res.ok) throw new Error(`Rasm faylini yuklab bo'lmadi (${res.status})`);
+    const bytes = Buffer.from(await res.arrayBuffer());
+
+    const operationName = await submitVideoJob(instruction, bytes.toString("base64"), "image/jpeg");
+    const [job] = await db
+      .insert(veoJobs)
+      .values({ userId: ownerId, chatId: BigInt(chatId), prompt: instruction, operationName })
+      .returning();
+
+    await ctx.reply(
+      "🎬 Video tayyorlanmoqda, odatda bir necha o'n soniya vaqt oladi. Tayyor bo'lganda avtomatik yuboraman."
+    );
+    after(() => processVeoJob(job.id, chatId, operationName));
+  } catch (error) {
+    console.error("[telegram-bot] Veo video topshirishda xato", error);
+    const message = error instanceof Error ? error.message : "noma'lum xato";
+    await ctx.reply(`Video yaratib bo'lmadi: ${message}`);
+  } finally {
+    await deletePhotoSession(chatId);
+  }
+}
+
+// Rasm -> AI video (Veo) oqimi: rasm caption bilan kelsa caption darhol
+// ko'rsatma sifatida ishlatiladi; caption'siz kelsa "Bu odam nima desin?"
+// deb so'raladi va KEYINGI matn/ovozli xabar ko'rsatma sifatida qabul
+// qilinadi (pastdagi message:text/message:voice handlerlarida davom etadi).
+// FAQAT shaxsiy chatda ishlaydi. Egasining o'z DM'ida cheklovsiz va
+// sozlamasiz ishlaydi (o'z-o'zini sinash); begona uchun "/shaxsiy-ai"
+// sahifasidagi businessVideoGenerationEnabled yoqilgan bo'lishi SHART
+// (haqiqiy pul sarflanadigani sabab standart holatda o'chiq) va kunlik
+// VEO_DAILY_GUEST_LIMIT qo'llanadi.
+bot.on("message:photo", async (ctx) => {
+  if (ctx.chat.type !== "private") return;
+  const fromId = ctx.from?.id;
+  if (!fromId) return;
+
+  const owner = await getOwnerUser(Number(ALLOWED_TELEGRAM_ID));
+  if (!owner) return;
+
+  const isGuest = fromId.toString() !== ALLOWED_TELEGRAM_ID;
+  if (isGuest && !owner.businessVideoGenerationEnabled) {
+    await ctx.reply("Kechirasiz, hozircha rasmlarni qabul qila olmayman.");
+    return;
+  }
+
+  const photo = ctx.message.photo[ctx.message.photo.length - 1];
+  const caption = ctx.message.caption?.trim();
+
+  if (caption) {
+    await handlePhotoInstruction(ctx, owner.id, ctx.chat.id, photo.file_id, caption, isGuest);
+    return;
+  }
+
+  await savePhotoSession(owner.id, ctx.chat.id, photo.file_id);
+  await ctx.reply("🖼️ Rasm qabul qilindi. Bu odam nima desin? Matn yoki ovozli xabar bilan ayting.");
+});
+
 // AI Website Analyzer (URL yuborish / "To'g'rila") kimdan kelishidan
 // qat'i nazar ishlaydi — shaxsiy AI Assistant tekshiruvidan OLDIN.
 // Bu FAQAT shaxsiy chatda (private) ishlaydi — guruh
@@ -683,6 +837,19 @@ bot.on("message:text", async (ctx) => {
   const pendingPdf = await getPdfSession(ctx.chat.id);
   if (pendingPdf) {
     await handlePdfInstruction(ctx, pendingPdf, text);
+    return;
+  }
+
+  const pendingPhoto = await getPhotoSession(ctx.chat.id);
+  if (pendingPhoto) {
+    await handlePhotoInstruction(
+      ctx,
+      pendingPhoto.userId,
+      ctx.chat.id,
+      pendingPhoto.fileId,
+      text,
+      fromId.toString() !== ALLOWED_TELEGRAM_ID
+    );
     return;
   }
 
@@ -740,6 +907,19 @@ bot.on("message:voice", async (ctx) => {
   const pendingPdf = ctx.chat ? await getPdfSession(ctx.chat.id) : null;
   if (pendingPdf) {
     await handlePdfInstruction(ctx, pendingPdf, transcript);
+    return;
+  }
+
+  const pendingPhoto = ctx.chat ? await getPhotoSession(ctx.chat.id) : null;
+  if (pendingPhoto) {
+    await handlePhotoInstruction(
+      ctx,
+      pendingPhoto.userId,
+      ctx.chat!.id,
+      pendingPhoto.fileId,
+      transcript,
+      fromId.toString() !== ALLOWED_TELEGRAM_ID
+    );
     return;
   }
 
@@ -815,6 +995,27 @@ bot.on("business_message", async (ctx) => {
     }
   }
 
+  // Rasm -> AI video (Veo): asosiy botdagi bot.on("message:photo") bilan bir
+  // xil mantiq, faqat bu yerda barcha xabarlar tabiatan begona (Business
+  // xabarlarida egasining o'z xabarlari yuqorida allaqachon filtrlangan) —
+  // shu sabab isGuest doim true va businessVideoGenerationEnabled orqali
+  // gate qilinadi.
+  if (!text && msg.photo) {
+    if (!owner.businessVideoGenerationEnabled) {
+      await ctx.reply("Kechirasiz, hozircha rasmlarni qabul qila olmayman.");
+      return;
+    }
+    const photo = msg.photo[msg.photo.length - 1];
+    const caption = msg.caption?.trim();
+    if (caption) {
+      await handlePhotoInstruction(ctx, owner.id, chatId, photo.file_id, caption, true);
+      return;
+    }
+    await savePhotoSession(owner.id, chatId, photo.file_id);
+    await ctx.reply("🖼️ Rasm qabul qilindi. Bu odam nima desin? Matn yoki ovozli xabar bilan ayting.");
+    return;
+  }
+
   if (!text && msg.voice) {
     if (!owner.businessVoiceReplyEnabled) {
       await ctx.reply("Hozircha ovozli xabarlarni qabul qilmayapman.");
@@ -848,6 +1049,12 @@ bot.on("business_message", async (ctx) => {
   const pendingPdf = await getPdfSession(chatId);
   if (pendingPdf) {
     await handlePdfInstruction(ctx, pendingPdf, text);
+    return;
+  }
+
+  const pendingPhoto = await getPhotoSession(chatId);
+  if (pendingPhoto) {
+    await handlePhotoInstruction(ctx, owner.id, chatId, pendingPhoto.fileId, text, true);
     return;
   }
 

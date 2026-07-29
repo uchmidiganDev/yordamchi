@@ -44,6 +44,15 @@ export const analysisKind = pgEnum("analysis_kind", [
 
 export const cardBrand = pgEnum("card_brand", ["uzcard", "humo"]);
 
+// AI video generatsiya (Google Veo) topshirig'ining holati — submit qilingach
+// fon rejimida (Next.js `after()`) kutiladi va tugagach Telegram'ga yuboriladi
+// (src/lib/veo.ts, src/lib/telegram-bot.ts).
+export const veoJobStatus = pgEnum("veo_job_status", [
+  "processing",
+  "done",
+  "failed",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   telegramId: bigint("telegram_id", { mode: "bigint" }).notNull().unique(),
@@ -92,6 +101,16 @@ export const users = pgTable("users", {
   businessVideoDownloadEnabled: boolean("business_video_download_enabled")
     .notNull()
     .default(true),
+  // Rasm yuborilganda AI video generatsiyasi (Google Veo, rasmdagi odam
+  // berilgan gapni aytadigan video). Boshqa business* bayroqlaridan farqli
+  // o'laroq standart holatda O'CHIQ — bu funksiya haqiqiy pul sarflaydi
+  // (~$1.2/video), shuning uchun egasi buni ataylab yoqishi kerak
+  // (src/app/(app)/shaxsiy-ai).
+  businessVideoGenerationEnabled: boolean(
+    "business_video_generation_enabled"
+  )
+    .notNull()
+    .default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -490,6 +509,49 @@ export const pdfSessions = pgTable(
   })
 );
 
+// Rasm -> AI video generatsiya oqimi uchun: rasm caption'siz kelsa AI "Bu
+// odam nima desin?" deb so'raydi, shu chatdagi KEYINGI xabar ko'rsatma
+// sifatida qabul qilinadi. `pdfSessions` bilan bir xil naqsh (faqat
+// Telegram `fileId` saqlanadi, chatId bo'yicha bitta sessiya).
+export const photoSessions = pgTable(
+  "photo_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+    fileId: text("file_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    chatUnique: unique("photo_sessions_chat_unique").on(t.chatId),
+  })
+);
+
+// AI video generatsiya (Google Veo) topshiriqlari tarixi — submit
+// qilingandan tortib yakunlanguncha (yoki xatolikkacha) holatni kuzatish
+// uchun (src/lib/veo.ts, src/lib/telegram-bot.ts).
+export const veoJobs = pgTable("veo_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatId: bigint("chat_id", { mode: "bigint" }).notNull(),
+  prompt: text("prompt").notNull(),
+  status: veoJobStatus("status").notNull().default("processing"),
+  operationName: text("operation_name").notNull(),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type LoginToken = typeof loginTokens.$inferSelect;
@@ -517,3 +579,5 @@ export type BusinessMessage = typeof businessMessages.$inferSelect;
 export type NewBusinessMessage = typeof businessMessages.$inferInsert;
 export type MiniAppMessage = typeof miniAppMessages.$inferSelect;
 export type NewMiniAppMessage = typeof miniAppMessages.$inferInsert;
+export type VeoJob = typeof veoJobs.$inferSelect;
+export type NewVeoJob = typeof veoJobs.$inferInsert;

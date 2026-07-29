@@ -17,6 +17,7 @@ export type ShaxsiyAiSettings = {
   voiceReplyEnabled: boolean;
   linkAnalysisEnabled: boolean;
   videoDownloadEnabled: boolean;
+  videoGenerationEnabled: boolean;
 };
 
 export async function getShaxsiyAiSettings(): Promise<ShaxsiyAiSettings> {
@@ -28,6 +29,7 @@ export async function getShaxsiyAiSettings(): Promise<ShaxsiyAiSettings> {
       businessVoiceReplyEnabled: users.businessVoiceReplyEnabled,
       businessLinkAnalysisEnabled: users.businessLinkAnalysisEnabled,
       businessVideoDownloadEnabled: users.businessVideoDownloadEnabled,
+      businessVideoGenerationEnabled: users.businessVideoGenerationEnabled,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -38,6 +40,7 @@ export async function getShaxsiyAiSettings(): Promise<ShaxsiyAiSettings> {
     voiceReplyEnabled: row?.businessVoiceReplyEnabled ?? true,
     linkAnalysisEnabled: row?.businessLinkAnalysisEnabled ?? true,
     videoDownloadEnabled: row?.businessVideoDownloadEnabled ?? true,
+    videoGenerationEnabled: row?.businessVideoGenerationEnabled ?? false,
   };
 }
 
@@ -64,6 +67,15 @@ export async function setVideoDownloadEnabled(enabled: boolean) {
   await db
     .update(users)
     .set({ businessVideoDownloadEnabled: enabled })
+    .where(eq(users.id, userId));
+  revalidatePath("/shaxsiy-ai");
+}
+
+export async function setVideoGenerationEnabled(enabled: boolean) {
+  const userId = await requireUserId();
+  await db
+    .update(users)
+    .set({ businessVideoGenerationEnabled: enabled })
     .where(eq(users.id, userId));
   revalidatePath("/shaxsiy-ai");
 }
