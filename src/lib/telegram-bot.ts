@@ -678,7 +678,14 @@ async function handlePdfInstruction(
 // EMAS, lekin Vercel funksiya vaqti cheklangani sabab) aniq xato xabari
 // bilan to'xtatiladi va veoJobs "failed" belgilanadi — /img'dagi bilan bir
 // xil "eng yaxshi urinish, cheklangan kutish" naqshi (2026-07-24'dagi qaror).
-const VEO_WAIT_DEADLINE_MS = 45_000;
+// MUHIM: jonli sinovda (2026-07-29) aniqlandi — realistik odam portretida
+// generatsiya ~90-100s davom etishi mumkin (stilizatsiya qilingan avatar
+// rasmidagi ~44s'dan sezilarli uzoqroq), avvalgi 45s chegara BUNDAY holatlarda
+// video haqiqatda muvaffaqiyatli yaratilgan bo'lsa ham "vaqt chegarasidan
+// oshib ketdi" xatosini bergan (video Google serverida tayyor turgan, faqat
+// biz yetarlicha kutmagan edik). webhook route'idagi maxDuration ham (120s)
+// shunga mos 180s'ga oshirildi.
+const VEO_WAIT_DEADLINE_MS = 100_000;
 
 async function processVeoJob(jobId: string, chatId: number, operationName: string) {
   const result = await waitForVideoJob(operationName, VEO_WAIT_DEADLINE_MS);
