@@ -81,14 +81,26 @@ export const users = pgTable("users", {
   businessConnectionEnabled: boolean("business_connection_enabled")
     .notNull()
     .default(false),
-  // Telefon bo'limi (PSTN/Telnyx rejasi): qo'ng'iroqqa javob berayotgan AI
-  // shaxs (persona) va AI javob berish holati. 2026-07-22'da UI ("/telefon"
-  // sahifasi) olib tashlandi va o'rniga "/shaxsiy-ai" (Telegram Business
-  // orqali) qo'yildi — bu ustunlar/`aiPersonas` jadvali ATAYLAB o'chirilmadi,
-  // chunki `src/app/api/telnyx/webhook/route.ts` hali shu ma'lumotga
-  // (persona nomi) tayanadi (Telnyx dormant, lekin kod ishlaydi).
+  // ESKI (2026-07-22, endi ishlatilmaydi): Telefon bo'limining birinchi
+  // (Telnyx Call Control) rejasidagi persona ko'rsatkichi. UI 2026-07-23'da
+  // olib tashlangan; ustun/`aiPersonas` jadvali ATAYLAB o'chirilmadi, chunki
+  // dormant `src/app/api/telnyx/webhook/route.ts` hali shu maydonga tayanadi.
   activePersonaId: uuid("active_persona_id"),
+  // 2026-07-31'dan boshlab QAYTA MA'NOLANGAN: endi yangi ElevenLabs
+  // Conversational AI asosidagi telefon operatorining yoqilgan/o'chirilgan
+  // holatini bildiradi ("/tel" sahifasi). Yoqilganda telefon raqami
+  // ElevenLabs agentiga biriktiriladi (src/lib/actions/tel.ts).
   phoneAiEnabled: boolean("phone_ai_enabled").notNull().default(false),
+  // ElevenLabs Conversational AI agent ID'si — bizning kod tomonidan
+  // yaratiladi/yangilanadi (src/lib/phone-agent.ts, syncPhoneAgent()).
+  phoneAgentId: text("phone_agent_id"),
+  // Telnyx SIP trunk raqami ElevenLabs paneli orqali import qilingach
+  // beriladigan ElevenLabs "phone_number" resurs ID'si — foydalanuvchi
+  // tomonidan "/tel" sahifasidagi formaga bir marta kiritiladi.
+  phoneNumberId: text("phone_number_id"),
+  // Faqat ko'rsatuv/GSM-forward ko'rsatmalari uchun (E.164, masalan
+  // "+1..."), API chaqiruvlarida ishlatilmaydi.
+  phoneNumberE164: text("phone_number_e164"),
   // "/shaxsiy-ai" sahifasi: Telegram Business orqali shaxsiy akkauntga
   // kelgan xabarlarda qaysi qo'shimcha imkoniyatlar faol ekanini boshqaradi
   // (src/lib/telegram-bot.ts'dagi business_message handleri).
@@ -552,6 +564,42 @@ export const veoJobs = pgTable("veo_jobs", {
     .defaultNow(),
 });
 
+// "/tel" — ElevenLabs Conversational AI orqali javob berilgan haqiqiy
+// telefon qo'ng'iroqlari jurnali. Yozuv `post_call_transcription` webhook
+// kelganda yaratiladi (src/app/api/tel/webhook/route.ts); audio esa fonda
+// alohida so'rov bilan to'ldiriladi (src/lib/phone-agent.ts,
+// fetchAndStoreCallRecording()). `rawPayload` — ElevenLabs'ning xom webhook
+// JSON'i, chaqiruvchi raqam maydoni noto'g'ri aniqlansa keyinroq tuzatish
+// uchun (2026-07-31 qarori, ma'lumot yo'qolmasligi uchun).
+export const phoneCalls = pgTable(
+  "phone_calls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id").notNull(),
+    callerNumber: text("caller_number"),
+    calleeNumber: text("callee_number"),
+    status: text("status").notNull().default("in_progress"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    durationSeconds: integer("duration_seconds"),
+    transcriptJson: text("transcript_json"),
+    summary: text("summary"),
+    recordingBase64: text("recording_base64"),
+    recordingMimeType: text("recording_mime_type"),
+    rawPayload: text("raw_payload"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    conversationUnique: unique("phone_calls_conversation_unique").on(
+      t.conversationId
+    ),
+  })
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type LoginToken = typeof loginTokens.$inferSelect;
@@ -581,3 +629,5 @@ export type MiniAppMessage = typeof miniAppMessages.$inferSelect;
 export type NewMiniAppMessage = typeof miniAppMessages.$inferInsert;
 export type VeoJob = typeof veoJobs.$inferSelect;
 export type NewVeoJob = typeof veoJobs.$inferInsert;
+export type PhoneCall = typeof phoneCalls.$inferSelect;
+export type NewPhoneCall = typeof phoneCalls.$inferInsert;

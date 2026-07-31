@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/mehmon",
   "/api/telegram/webhook",
   "/api/telegram/bots",
+  "/api/tel/webhook",
   "/api/auth/telegram/start",
   "/api/auth/telegram/status",
   "/api/auth/telegram/webapp",

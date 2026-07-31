@@ -134,6 +134,13 @@
       "when": 1785308697645,
       "tag": "0018_normal_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785492788317,
+      "tag": "0019_brave_the_initiative",
+      "breakpoints": true
     }
   ]
 }

@@ -11,7 +11,7 @@ import { DEFAULT_ASSISTANT_SYSTEM_PROMPT } from "./assistant-prompt";
 
 export type ConversationTurn = { question: string; answer: string };
 
-function formatKnowledgeBase(
+export function formatKnowledgeBase(
   entries: { title: string; content: string }[]
 ): string {
   if (entries.length === 0) return "(bilim bazasi hali bo'sh)";
