@@ -82,7 +82,16 @@ function phoneAgentBody({ systemPrompt, firstMessage, voiceId }: PhoneAgentParam
       agent: {
         prompt: { prompt: systemPrompt },
         first_message: firstMessage,
-        language: "uz",
+        // ElevenLabs Conversational AI o'zbek tilini ("uz") qo'llab-quvvatlamaydi
+        // (agent yaratishda 422 "Language uz is not supported for model
+        // eleven_multilingual_v2" xatosi bilan aniqlandi) — bu maydon ASR/turn-taking
+        // uchun ishlatiladi, oddiy TTS endpoint (synthesizeClonedVoice) esa til
+        // ko'rsatmasidan mustaqil ravishda o'zbekcha matnni allaqachon tabiiy talaffuz
+        // bilan aytib berishi tasdiqlangan. "ru" tanlandi — O'zbekistonda deyarli barcha
+        // qo'ng'iroq qiluvchilar ruscha ham tushunadi/gapiradi va eleven_multilingual_v2
+        // ro'yxatida bor; agar jonli sinovda ASR sifati past chiqsa, "tr" (turkiy til,
+        // fonetik jihatdan o'zbekchaga yaqinroq) muqobil sifatida sinash kerak.
+        language: "ru",
       },
       tts: {
         voice_id: voiceId,
